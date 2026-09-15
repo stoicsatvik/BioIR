@@ -1,0 +1,24 @@
+{
+  "version": "bioir/v0",
+  "name": "toy_homeostasis",
+  "state": {
+    "signal_a": 0.2,
+    "signal_b": 0.8
+  },
+  "objectives": [
+    {
+      "variable": "signal_a",
+      "target": 0.7,
+      "tolerance": 0.05
+    },
+    {
+      "variable": "signal_b",
+      "target": 0.4,
+      "tolerance": 0.05
+    }
+  ],
+  "constraints": {
+    "max_steps": 25,
+    "max_action_magnitude": 0.15
+  }
+}
