@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import random
+from statistics import mean, median
 
 from .belief import BeliefValue
 from .belief_compiler import compile_belief_objective
@@ -17,6 +18,26 @@ class FailureTrajectory:
     longest_wait_streak: int
     final_state: float
     converged: bool
+
+
+@dataclass(frozen=True)
+class FailureMechanismSummary:
+    """Aggregate diagnostics over the frozen failure population.
+
+    These are software/simulation diagnostics, not biological measurements.
+    """
+    failure_count: int
+    mean_waits: float
+    median_waits: float
+    mean_actions: float
+    median_actions: float
+    mean_longest_wait_streak: float
+    max_longest_wait_streak: int
+    wait_dominated_count: int
+    action_dominated_count: int
+    tied_count: int
+    exhausted_budget_count: int
+    failure_seeds: tuple[int, ...]
 
 
 def trace_noisy_episode(
@@ -74,3 +95,33 @@ def fixed_1000_failure_trajectories() -> tuple[FailureTrajectory, ...]:
         if not result.converged:
             failures.append(trace_noisy_episode(seed))
     return tuple(failures)
+
+
+def summarize_fixed_1000_failures() -> FailureMechanismSummary:
+    """Quantify whether frozen failures are dominated by conservative deferral.
+
+    Classification is deliberately mechanical: wait-dominated means WAIT count is
+    greater than directional-action count; action-dominated is the reverse.
+    No causal claim is inferred from this descriptive partition.
+    """
+    trajectories = fixed_1000_failure_trajectories()
+    if not trajectories:
+        raise ValueError("frozen mixture contains no failures to diagnose")
+
+    waits = tuple(item.waits for item in trajectories)
+    actions = tuple(item.actions for item in trajectories)
+    streaks = tuple(item.longest_wait_streak for item in trajectories)
+    return FailureMechanismSummary(
+        failure_count=len(trajectories),
+        mean_waits=mean(waits),
+        median_waits=median(waits),
+        mean_actions=mean(actions),
+        median_actions=median(actions),
+        mean_longest_wait_streak=mean(streaks),
+        max_longest_wait_streak=max(streaks),
+        wait_dominated_count=sum(w > a for w, a in zip(waits, actions)),
+        action_dominated_count=sum(a > w for w, a in zip(waits, actions)),
+        tied_count=sum(a == w for w, a in zip(waits, actions)),
+        exhausted_budget_count=sum(item.waits + item.actions == 30 for item in trajectories),
+        failure_seeds=tuple(item.seed for item in trajectories),
+    )
