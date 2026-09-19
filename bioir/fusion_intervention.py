@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+import json
+from pathlib import Path
 import random
+from typing import Any
 
 from .belief import BeliefValue, fuse_observation
 from .belief_compiler import compile_belief_objective
@@ -84,3 +87,43 @@ def fixed_1000_fusion_verdict() -> MatchedFusionVerdict:
         regressed_seeds=tuple(b.seed for b, f in zip(baseline, fusion) if b.converged and not f.converged),
         recovered_seeds=tuple(b.seed for b, f in zip(baseline, fusion) if not b.converged and f.converged),
     )
+
+
+def verdict_artifact(verdict: MatchedFusionVerdict | None = None) -> dict[str, Any]:
+    """Return a canonical, machine-readable record of the frozen experiment.
+
+    The artifact records the experiment boundary and complete seed identities so a
+    negative result cannot be reduced to an aggregate score or silently retuned.
+    """
+    verdict = verdict or fixed_1000_fusion_verdict()
+    return {
+        "schema": "bioir/fusion-verdict/v1",
+        "experiment": {
+            "seed_start": 0,
+            "seed_stop_exclusive": 1000,
+            "matched_observations_per_step": 1,
+            "max_steps": 30,
+            "max_action_magnitude": 0.1,
+            "response_gain": 0.85,
+            "observation_noise": 0.08,
+            "promotion_rule": "fusion_converged > baseline_converged and no regressed seeds",
+        },
+        "verdict": asdict(verdict),
+        "claim_state": "REJECTED" if (
+            verdict.fusion_converged <= verdict.baseline_converged
+            or bool(verdict.regressed_seeds)
+        ) else "SUPPORTED",
+    }
+
+
+def write_verdict_artifact(path: str | Path) -> Path:
+    """Recompute and atomically persist the canonical frozen verdict as JSON."""
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    temporary.write_text(
+        json.dumps(verdict_artifact(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    temporary.replace(destination)
+    return destination
