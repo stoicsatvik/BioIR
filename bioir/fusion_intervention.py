@@ -96,6 +96,11 @@ def verdict_artifact(verdict: MatchedFusionVerdict | None = None) -> dict[str, A
     negative result cannot be reduced to an aggregate score or silently retuned.
     """
     verdict = verdict or fixed_1000_fusion_verdict()
+    serialized_verdict = asdict(verdict)
+    # JSON has arrays, not tuples. Normalize before returning so the in-memory
+    # canonical artifact is exactly equal to its persisted JSON round trip.
+    serialized_verdict["regressed_seeds"] = list(verdict.regressed_seeds)
+    serialized_verdict["recovered_seeds"] = list(verdict.recovered_seeds)
     return {
         "schema": "bioir/fusion-verdict/v1",
         "experiment": {
@@ -108,7 +113,7 @@ def verdict_artifact(verdict: MatchedFusionVerdict | None = None) -> dict[str, A
             "observation_noise": 0.08,
             "promotion_rule": "fusion_converged > baseline_converged and no regressed seeds",
         },
-        "verdict": asdict(verdict),
+        "verdict": serialized_verdict,
         "claim_state": "REJECTED" if (
             verdict.fusion_converged <= verdict.baseline_converged
             or bool(verdict.regressed_seeds)
