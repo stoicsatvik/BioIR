@@ -32,8 +32,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install package and test runner
-        run: python -m pip install -e ".[test]"
+      - name: Install package, tests and libSBML
+        run: python -m pip install -e ".[test,sbml]"
       - name: Run semantic-model contract tests
         run: python -m pytest -q tests/test_semantic_model.py
       - name: Check user-facing model before simulation
@@ -48,4 +48,33 @@ jobs:
           assert "<kineticLaw" not in xml
           assert "mathematicalRepresentationCommitted=\"false\"" in xml
           print("semantic/SBML boundary verified")
+          PY
+      - name: Validate generated document with libSBML
+        run: |
+          python - <<'PY'
+          import libsbml
+
+          path = "/tmp/bioir-model.xml"
+          document = libsbml.readSBML(path)
+          document.checkConsistency()
+
+          serious = []
+          for index in range(document.getNumErrors()):
+              error = document.getError(index)
+              if error.getSeverity() >= libsbml.LIBSBML_SEV_ERROR:
+                  serious.append(
+                      f"{error.getErrorId()}: {error.getMessage().strip()}"
+                  )
+
+          if serious:
+              raise SystemExit("\n".join(serious))
+
+          model = document.getModel()
+          assert model is not None
+          assert model.getNumCompartments() == 1
+          assert model.getNumSpecies() == 2
+          assert model.getNumParameters() == 1
+          assert model.getNumReactions() == 1
+          assert model.getReaction(0).isSetKineticLaw() is False
+          print("libSBML validation passed with no error-severity findings")
           PY
