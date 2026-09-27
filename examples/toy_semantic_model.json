@@ -1,0 +1,57 @@
+{
+  "version": "bioir/semantic/v1",
+  "name": "toy_conversion",
+  "compartments": [
+    {
+      "id": "cell",
+      "name": "synthetic cell compartment",
+      "size": 1.0,
+      "unit": "litre"
+    }
+  ],
+  "entities": [
+    {
+      "id": "substrate",
+      "kind": "species",
+      "compartment": "cell",
+      "initial_value": 1.0,
+      "quantity_kind": "concentration",
+      "unit": "mole_per_litre"
+    },
+    {
+      "id": "product",
+      "kind": "species",
+      "compartment": "cell",
+      "initial_value": 0.0,
+      "quantity_kind": "concentration",
+      "unit": "mole_per_litre"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "k1",
+      "name": "candidate first-order rate parameter",
+      "value": 0.1,
+      "unit": "per_second",
+      "constant": true
+    }
+  ],
+  "interactions": [
+    {
+      "id": "conversion_1",
+      "kind": "conversion",
+      "inputs": [
+        {"entity": "substrate", "stoichiometry": 1}
+      ],
+      "outputs": [
+        {"entity": "product", "stoichiometry": 1}
+      ],
+      "parameter_refs": ["k1"],
+      "reversible": false
+    }
+  ],
+  "provenance": {
+    "source": "BioIR synthetic example",
+    "notes": "No kinetic law is committed in the user-facing semantic model."
+  }
+}
