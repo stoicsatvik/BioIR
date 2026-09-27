@@ -58,7 +58,7 @@ Added:
 - CLI model checking and SBML export;
 - deterministic tests for delayed mathematical commitment.
 
-Status: UNDER VALIDATION until exact-head CI executes.
+Validation: implementation head `093c7e26b20e725baf9e9188fc5f2548cb9b5ba1` passed the dedicated `semantic-model-v1` job in Actions run `36340456380`. Seven semantic-model tests passed; the CLI static check reported zero errors/warnings; structural SBML export succeeded; the no-hidden-kinetics contract passed; and libSBML reported no error-severity findings.
 
 ## Mathematical commitment boundary
 
@@ -72,7 +72,7 @@ SBML is treated as an interoperability/lowering target, not something BioIR need
 
 The current exporter covers a narrow structural subset: model, compartments, species, parameters, reactions, species references, modifier references and supported unit definitions.
 
-Full SBML conformance has NOT YET BEEN VALIDATED against established external tooling.
+The generated example has passed a libSBML consistency check with no error-severity findings. Broader SBML conformance, richer models, package coverage, and round-trip semantic preservation remain NOT YET PROVEN.
 
 ## Existing controller stack
 
@@ -116,8 +116,8 @@ For the semantic-model frontier, primary software questions are:
 
 ## Current blocker
 
-The semantic/SBML architecture is not externally validated yet. Repository tests can prove our own structural contract, not full SBML interoperability.
+The first generated structural document passes libSBML consistency checking, but that is only one bounded example. Multi-model round-trip interoperability and semantic preservation across established SBML tooling remain unvalidated.
 
 ## Current next move
 
-Validate the new semantic-model tests in CI. Then run generated documents through established SBML tooling and use any failures to tighten the exporter. After that, add explicit compile-time kinetics profiles with assumption/provenance receipts rather than embedding mathematics back into the user model.
+Expand the interoperability benchmark beyond one toy model: generate multiple typed semantic models, round-trip them through established SBML tooling, compare recovered compartments/species/parameters/reaction topology, and preserve any semantic loss. Only after that add explicit compile-time kinetics profiles with assumption/provenance receipts.
