@@ -1,59 +1,123 @@
 # Unified Foundry State — BioIR
 
 ## Mission
-Build a safe, executable biological abstraction layer that maps high-level biological objectives into typed, inspectable, reproducible intermediate representations and simulation policies, without pretending simulation is equivalent to wet-lab or clinical validation.
+
+Build a safe, user-facing biological abstraction that preserves biological structure, units, metadata and provenance, performs useful checks before simulation, and lowers explicitly into established modeling/simulation backends without silently committing the user to one mathematical representation.
 
 ## Claim status
-NOT YET PROVEN as a biologically valid control layer. The repository currently supports only software/simulation research.
 
-CI INTEGRITY RESULT (2026-09-19): exact PR-head `40be53d8eb76e09e2843f46d80f564b2ee98d9b2` was evaluated by Actions run `35440467009` with corrected pytest discovery. The run collected the intended suite: 34 tests passed and exactly one preregistered temporal-fusion promotion test failed. The failure is the preserved scientific result, not an infrastructure/test-discovery failure: fusion convergence remained 876/1000 versus baseline 963/1000. The new canonical verdict-artifact tests therefore executed and passed in the same run while the rejected promotion gate remained red.
+NOT YET PROVEN as a biologically valid abstraction or control layer. The repository supports software/modeling experiments only.
 
-REJECTED by corrected CI on the frozen 1,000-seed matched synthetic experiment: the naïve temporal belief-fusion intervention. Baseline convergence was 963/1000 and fusion convergence was 876/1000. Both baseline and fusion retained zero unsupported-direction decisions, but fusion failed the preregistered strict-improvement gate. The negative result is preserved; do not weaken the gate or tune this intervention against the same frozen seeds.
+The historical controller research remains part of the evidence record:
 
-REJECTED from deterministic benchmark reproduction: universal robustness of the current conservative noisy controller on the frozen synthetic mixture.
+- corrected CI preserved the frozen 1,000-seed temporal-fusion result;
+- baseline convergence: 963/1000;
+- temporal fusion convergence: 876/1000;
+- unsupported-direction decisions: 0 for both;
+- the temporal-fusion intervention remains REJECTED by its frozen promotion rule;
+- the rejected 0..999 seed population must not be reused for tuning.
 
-SUPPORTED as executed software contracts: the 34 pytest contracts that passed under corrected discovery on PR #9, including deterministic canonical verdict serialization and preservation of the frozen negative result/seed identities. This is software/simulation evidence only, not biological validation.
+Negative evidence is retained.
 
-NOT YET PROVEN: biological sensing accuracy; causal validity; organism-level behavior; intervention efficacy; wet-lab validity; clinical validity.
+## Architecture revision — 2026-09-27
 
-## Current stack
-`intent -> objective/state/constraint model -> BioIR -> uncertainty-aware compiler/controller -> simulation backend -> observation -> feedback`
+BioIR is being re-centered around a stronger abstraction boundary:
 
-## Current v0 capabilities
-- Typed program/state/objective/constraint representation.
-- Small semantic ISA: SENSE, INCREASE, DECREASE, MAINTAIN, WAIT.
-- Compiler from high-level goals to abstract operations.
-- Closed-loop toy runtime with repeated sensing, planning, action, and re-observation.
-- `BeliefValue(mean, uncertainty)` with bounded intervals and conservative directional predicates.
-- Matched exact/noisy synthetic benchmark and per-seed failure retention.
-- Descriptive failure summaries.
-- Experimental temporal belief-fusion controller, now REJECTED under its frozen promotion gate.
-- Canonical `bioir/fusion-verdict/v1` machine-readable artifact with deterministic byte serialization, frozen experiment boundary, convergence/unsupported-direction metrics, and recovered/regressed seed identities.
+```text
+user-facing semantic model
+        ↓
+static checks
+        ↓
+compile-time lowering
+        ↓
+SBML / simulator / future backend
+```
 
-## CI integrity repair
-Branch `foundry/v02-ci-falsification-integrity` installs an explicit pytest test extra and executes `python -m pytest -q`. PR #9 run `35440467009` further demonstrates that the corrected pipeline executes both the canonical-artifact contracts and the deliberately failing falsification gate in one suite.
+The abstraction itself is what the user should work with. A hidden internal IR sitting beneath another user model is no longer the architectural goal.
 
-## Historical evidence audit
-Historical workflows #2-#14 may still be useful for package installation and CLI smoke-test evidence, but they are not accepted as proof that pytest-style falsification functions executed. Their green status must not be cited as test-suite validation without corrected reruns.
+The semantic layer should preserve biological meaning while delaying commitment to a particular mathematical realization until compilation.
 
-## Frozen quantitative result
-Corrected pytest execution preserved the frozen baseline at 963/1000 convergence and measured the temporal-fusion candidate at 876/1000. Baseline unsupported-direction decisions: 0. Fusion unsupported-direction decisions: 0. The intervention therefore preserves the directional-safety property in this toy simulator but materially worsens convergence and is REJECTED by the preregistered promotion rule.
+## Semantic model v1 — current branch
+
+Branch: `foundry/semantic-model-sbml-v1`
+
+Added:
+
+- typed compartments;
+- biological entities;
+- amount/concentration semantics;
+- explicit units;
+- parameters;
+- interaction topology;
+- stoichiometry;
+- modifiers;
+- provenance;
+- static reference/unit/model checks;
+- structural SBML Level 3 Version 2 lowering;
+- deliberate omission of kinetic laws by default;
+- CLI model checking and SBML export;
+- deterministic tests for delayed mathematical commitment.
+
+Status: UNDER VALIDATION until exact-head CI executes.
+
+## Mathematical commitment boundary
+
+`bioir/semantic/v1` rejects embedded `rate_law`, `kinetic_law`, `ode`, `math` and `mathml` fields in interactions.
+
+A later backend profile may introduce mathematics, but that assumption must be explicit at compile time and must not be confused with biology-level semantics.
+
+## SBML boundary
+
+SBML is treated as an interoperability/lowering target, not something BioIR needs to replace.
+
+The current exporter covers a narrow structural subset: model, compartments, species, parameters, reactions, species references, modifier references and supported unit definitions.
+
+Full SBML conformance has NOT YET BEEN VALIDATED against established external tooling.
+
+## Existing controller stack
+
+The legacy synthetic controller path remains preserved:
+
+```text
+objective/state/constraint model
+  ↓
+uncertainty-aware compiler/controller
+  ↓
+SENSE / INCREASE / DECREASE / MAINTAIN / WAIT
+  ↓
+synthetic closed-loop runtime
+```
+
+It is now treated as one downstream research path rather than the entire definition of BioIR.
 
 ## Hard boundary
-BioIR remains simulation-first and safety-constrained.
+
+BioIR remains simulation/modeling-first and safety-constrained.
+
 - No nucleotide-sequence generation for harmful biological engineering.
 - No pathogen engineering or optimization.
 - No wet-lab procedural protocols.
 - No autonomous real-world biological actuation.
 - No human/animal experimentation instructions.
 - No patient-specific treatment or clinical decision system.
-- Toy or computational success must never be promoted as organism-level or clinical evidence.
+- Computational success must never be promoted as organism-level or clinical evidence.
 
 ## Evaluation doctrine
-Every substantial change should answer a falsifiable question and preserve a baseline. Primary software metrics include deterministic replay, target attainment, unsupported-direction decisions, WAIT/deferral cost, convergence time, oscillation, budget use, failure identities, and regression seeds. Test discovery itself is part of the evidence chain: a green CI job is insufficient unless the intended tests are demonstrably collected and executed. A failing preregistered promotion test is valid evidence and must not be rewritten merely to restore green CI.
+
+Every substantive change should answer a falsifiable question and preserve failures.
+
+For the semantic-model frontier, primary software questions are:
+
+1. Can malformed references and unit mismatches be caught before simulation?
+2. Can one user-facing semantic model lower deterministically?
+3. Does lowering preserve compartments, entities, quantities, interactions and metadata?
+4. Can mathematical assumptions remain absent until an explicit compilation profile introduces them?
+5. Can generated SBML pass established external validation without weakening the semantic contract?
 
 ## Current blocker
-The naïve temporal-fusion path is empirically rejected on the frozen seed set. Further tuning against those same 1,000 seeds would contaminate the evaluation frontier. The full workflow remains intentionally red because the preserved promotion assertion correctly rejects the candidate; this is evidence, not a request to weaken the test.
+
+The semantic/SBML architecture is not externally validated yet. Repository tests can prove our own structural contract, not full SBML interoperability.
 
 ## Current next move
-Preregister a materially different controller candidate and a sealed seed mixture before implementation/evaluation. Keep the rejected 0..999 temporal-fusion experiment immutable and use its canonical verdict artifact only as historical evidence. Biological validity remains NOT YET PROVEN regardless of simulator outcome.
+
+Validate the new semantic-model tests in CI. Then run generated documents through established SBML tooling and use any failures to tighten the exporter. After that, add explicit compile-time kinetics profiles with assumption/provenance receipts rather than embedding mathematics back into the user model.
