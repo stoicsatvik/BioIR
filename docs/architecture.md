@@ -1,88 +1,102 @@
 # BioIR architecture
 
-BioIR separates **intent**, **representation**, **control**, and **execution** so no single layer needs to know how every lower layer works.
+BioIR's primary abstraction is now the **model the user works with**, not a hidden compiler-only IR.
 
-## Layer model
-
-```text
-L7  Intent / phenotype specification
-L6  Objective + constraint model
-L5  BioIR semantic operations
-L4  Planner / controller
-L3  Backend adapter
-L2  State transition model
-L1  Observations
-L0  underlying biological reality (outside v0)
-```
-
-BioIR v0 implements L6-L2 against a synthetic normalized state space. L0-L1 are deliberately mocked. This keeps the compiler architecture testable without pretending a toy model is a real organism.
-
-## Closed-loop execution
-
-The runtime follows five phases:
+The design rule is:
 
 ```text
-SENSE → INFER → PLAN → ACT → OBSERVE → repeat
+user-facing biological semantics
+        ↓
+static checks and metadata validation
+        ↓
+compile-time lowering boundary
+        ↓
+SBML / simulator representation / future backend
 ```
 
-For v0, sensing is perfect and state is fully observable. The state estimate is therefore simply the current synthetic state. Later versions can separate latent state `S_t` from observation `O_t` and maintain a belief distribution.
+The semantic layer should preserve biological meaning while delaying commitment to a particular mathematical representation until a backend actually needs one.
 
-## BioIR semantic ISA
+## User-facing semantic model
 
-`SENSE(variable)` requests an observation.
+`bioir/semantic/v1` represents:
 
-`INCREASE(variable, magnitude)` expresses a directional state change.
+- compartments;
+- biological entities;
+- initial quantities;
+- amount/concentration semantics;
+- explicit units;
+- parameters as named metadata;
+- interaction topology;
+- stoichiometry;
+- modifiers;
+- constraints implied by typed references;
+- provenance.
 
-`DECREASE(variable, magnitude)` expresses the opposite directional state change.
+The semantic model deliberately does **not** contain an ODE, MathML expression, rate law or backend-specific solver choice. In v1, trying to place fields such as `rate_law`, `kinetic_law`, `ode` or `math` inside an interaction is rejected.
 
-`MAINTAIN(variable, target, tolerance)` declares a feedback objective rather than a one-shot mutation.
+This is intentional. The user authors the biology-level representation; a later lowering profile chooses the mathematics.
 
-`WAIT(steps)` advances a backend without requesting another state change.
+## Static model checks
 
-The important design rule is that these operations describe **what semantic transition is requested**, not how to perform it in a laboratory.
+Before any simulation or backend lowering, BioIR checks:
 
-## Compiler contract
+1. identifier portability and collisions;
+2. compartment existence;
+3. reference integrity;
+4. finite/non-negative initial quantities;
+5. finite parameter values;
+6. positive stoichiometry;
+7. quantity-kind/unit dimensional compatibility;
+8. parameter references;
+9. provenance presence as a warning.
 
-The compiler consumes:
+The current unit system is deliberately small and explicit. It is a compiler contract, not an attempt to replace a real ontology.
+
+## Compile-time lowering
+
+A backend receives a validated semantic model and chooses how to represent it.
+
+The first interoperability backend emits a structural **SBML Level 3 Version 2 Core** document containing compartments, species, parameters and reactions.
+
+Crucially, the default SBML backend emits **no kinetic law**. Interaction topology and parameter references are preserved, while mathematical kinetics remain uncommitted. A future compilation profile can choose a mathematical realization explicitly and audibly.
+
+## Relationship to existing BioIR controller work
+
+The earlier v0 controller path remains preserved:
 
 ```text
-(current state, objectives, constraints)
+objective/state model
+  ↓
+SENSE / INCREASE / DECREASE / MAINTAIN / WAIT
+  ↓
+synthetic closed-loop runtime
 ```
 
-and emits a sequence of semantic operations. Every lowering decision should eventually carry provenance, confidence, assumptions, and backend compatibility metadata.
+That work is still useful for uncertainty and controller falsification experiments, but it is no longer the whole definition of BioIR.
+
+Architecturally, it becomes one possible downstream research path rather than the user-facing abstraction itself.
 
 ## Backend contract
 
-A backend should eventually implement a small interface resembling:
+Backends must:
 
-```python
-observe(variable) -> Observation
-apply(operation) -> TransitionReceipt
-step() -> None
-snapshot() -> StateEstimate
-```
-
-Backends may be deterministic simulations, stochastic models, graph simulators, or validated external research simulators. Real-world actuation is intentionally out of scope for v0.
+- consume a statically valid semantic model;
+- declare what mathematical assumptions they introduce;
+- preserve provenance;
+- fail closed when required semantics cannot be represented;
+- never silently change units or identifiers;
+- keep real-world actuation outside this repository.
 
 ## Safety boundary
 
-BioIR v0 must remain simulation-only. It must not emit:
-
-- nucleotide or protein sequences intended for synthesis;
-- wet-lab procedures or experimental protocols;
-- pathogen optimization or biological threat design;
-- patient-specific treatment, dosing, or clinical instructions;
-- automatic physical actuation.
-
-This is not decorative policy text. It is an architectural constraint: the IR and runtime should remain useful even when all physical actuators are absent.
+BioIR remains simulation/modeling-only. It does not emit wet-lab procedures, biological sequences for synthesis, pathogen optimization, patient-specific treatment instructions, or autonomous physical actuation.
 
 ## Next technical milestones
 
-1. JSON Schema for versioned programs.
-2. First-class uncertainty on every state variable and observation.
-3. Dependency graphs and cross-variable coupling.
-4. Multi-objective optimization with hard and soft constraints.
-5. Backend capability negotiation.
-6. Provenance graph for compiler lowering decisions.
-7. Reproducible benchmark suite.
-8. A richer textual DSL that lowers to the same canonical IR.
+1. compile-time kinetics profiles with explicit assumption receipts;
+2. round-trip checks against established SBML tooling;
+3. richer unit definitions and ontology references;
+4. semantic equivalence tests across multiple backends;
+5. provenance receipts for every lowering decision;
+6. explicit model uncertainty that survives lowering;
+7. a compact textual syntax over the same semantic model, rather than a second hidden representation.
