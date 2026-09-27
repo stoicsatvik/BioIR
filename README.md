@@ -1,112 +1,146 @@
 # BioIR
 
-**BioIR is an experimental intermediate representation for programmable biology.**
+**BioIR is an experimental, user-facing semantic model for biological systems with explicit compile-time lowering into simulation and interoperability backends.**
 
-The long-term idea is simple: software became powerful when humans stopped reasoning about individual transistor state changes and started programming against stable abstraction layers. BioIR explores what the corresponding abstraction boundary could look like for biological systems.
+The central design has changed:
 
 ```text
-intent
-  ↓
-BioIR program
-  ↓
-state model + constraints
-  ↓
-planner/controller
-  ↓
-simulation backend
-  ↓
-observations
-  ↺
+user works with BioIR semantic model
+              ↓
+      static model checks
+              ↓
+     compile-time lowering
+              ↓
+   SBML / simulator / backend
 ```
 
-## What this repository is today
+The BioIR abstraction is not supposed to be hidden behind another modeling language. It is the representation the user directly authors and inspects.
 
-BioIR v0 is a **safe, simulation-only prototype**. It provides:
+## Why this boundary
 
-- a typed representation for biological state, objectives, constraints, and abstract operations;
-- a compiler that lowers high-level goals into a small biological instruction set;
-- a validator that rejects malformed or non-simulation operations;
-- a closed-loop toy runtime that repeatedly senses, plans, acts, and re-observes;
-- a CLI and tests so the core abstraction can evolve like a real compiler project instead of remaining a philosophical README.
+A biological model should be able to carry compartments, entities, units, parameters, interaction topology, stoichiometry and provenance **before** committing to one mathematical realization.
 
-BioIR deliberately does **not** generate nucleotide sequences, laboratory protocols, patient-specific treatment plans, dosing instructions, or real-world wet-lab actuation. Backends in this repository are synthetic state machines only.
+That enables checks such as:
 
-## Core model
+- does every entity live in a real compartment?
+- are identifiers unique and portable?
+- do concentration variables actually use concentration units?
+- do interactions reference existing entities and parameters?
+- is stoichiometry positive?
+- is provenance present?
 
-A biological system is treated as a partially observed dynamical system:
+Only after those checks does a backend choose how to lower the model.
 
-\[
-S_{t+1} \sim P(S_{t+1}\mid S_t, A_t)
-\]
+## Semantic model v1
 
-with observations:
-
-\[
-O_t \sim P(O_t\mid S_t)
-\]
-
-and a controller selecting an abstract action under constraints:
-
-\[
-A_t = \pi(\hat S_t, G, C)
-\]
-
-where `G` is the objective and `C` is the constraint set.
-
-## Tiny example
+A small example:
 
 ```json
 {
-  "name": "toy_homeostasis",
-  "state": {
-    "signal_a": 0.2,
-    "signal_b": 0.8
-  },
-  "objectives": [
-    {"variable": "signal_a", "target": 0.7, "tolerance": 0.05},
-    {"variable": "signal_b", "target": 0.4, "tolerance": 0.05}
+  "version": "bioir/semantic/v1",
+  "name": "toy_conversion",
+  "compartments": [
+    {"id": "cell", "size": 1.0, "unit": "litre"}
   ],
-  "constraints": {
-    "max_steps": 25,
-    "max_action_magnitude": 0.15
-  }
+  "entities": [
+    {
+      "id": "substrate",
+      "compartment": "cell",
+      "initial_value": 1.0,
+      "quantity_kind": "concentration",
+      "unit": "mole_per_litre"
+    },
+    {
+      "id": "product",
+      "compartment": "cell",
+      "initial_value": 0.0,
+      "quantity_kind": "concentration",
+      "unit": "mole_per_litre"
+    }
+  ],
+  "parameters": [
+    {"id": "k1", "value": 0.1, "unit": "per_second"}
+  ],
+  "interactions": [
+    {
+      "id": "conversion_1",
+      "kind": "conversion",
+      "inputs": [{"entity": "substrate"}],
+      "outputs": [{"entity": "product"}],
+      "parameter_refs": ["k1"]
+    }
+  ]
 }
 ```
 
-Run it with:
+Notice what is missing: there is no ODE and no rate-law expression.
+
+In `bioir/semantic/v1`, embedding fields such as `rate_law`, `kinetic_law`, `ode`, `math` or `mathml` in the user model is rejected. Mathematical commitment belongs at the lowering boundary.
+
+## Check before simulation
+
+```bash
+python -m bioir check-model examples/toy_semantic_model.json
+```
+
+BioIR runs static structural and dimensional checks without needing a simulator.
+
+## SBML interoperability
+
+The first lowering backend exports a structural SBML Level 3 Version 2 Core document:
+
+```bash
+python -m bioir export-sbml examples/toy_semantic_model.json --out model.xml
+```
+
+The current exporter preserves:
+
+- compartments;
+- species;
+- initial amount/concentration semantics;
+- parameters and supported units;
+- reactions and stoichiometry;
+- modifiers;
+- BioIR interaction metadata and parameter references.
+
+It intentionally emits **no kinetic law by default**. That is how the current experiment tests delayed commitment to mathematical representation.
+
+This exporter is a bounded interoperability prototype. Full conformance against established SBML validation tooling is the next gate, not something this README gets to declare by confidence.
+
+## Existing controller research
+
+The earlier BioIR v0 synthetic controller is preserved.
+
+```text
+objective/state/constraint model
+              ↓
+SENSE / INCREASE / DECREASE / MAINTAIN / WAIT
+              ↓
+synthetic closed-loop runtime
+```
+
+The old CLI remains available:
 
 ```bash
 python -m bioir compile examples/toy_homeostasis.json
 python -m bioir simulate examples/toy_homeostasis.json
 ```
 
-## Biological ISA v0
+Those controller experiments are now treated as one downstream research path, not the definition of the entire abstraction.
 
-The first instruction set is intentionally small and substrate-independent:
+The rejected temporal-fusion result is also preserved. BioIR does not rewrite failed experiments because a newer architecture is more attractive.
 
-```text
-SENSE(variable)
-INCREASE(variable, magnitude)
-DECREASE(variable, magnitude)
-MAINTAIN(variable, target, tolerance)
-WAIT(steps)
-```
+## Safety boundary
 
-These are **semantic operations**, not wet-lab instructions. A future backend may map them to models of pathways, cell states, tissues, or synthetic environments, but the IR itself stays independent of implementation technology.
+BioIR remains modeling/simulation-only. It does not generate wet-lab protocols, synthesis-ready biological sequences, pathogen optimization, patient-specific treatment instructions, or autonomous physical actuation.
 
-## Repository direction
+## Current research question
 
-The next milestones are:
+The next falsifiable question is:
 
-1. formal schema/versioning for BioIR programs;
-2. richer state estimation and uncertainty;
-3. graph-based dependency models;
-4. optimization over competing objectives and constraints;
-5. pluggable simulation backends;
-6. provenance for every lowering decision;
-7. benchmark tasks for controllability, robustness, and compression quality.
+> Can a typed, user-facing biological abstraction catch useful errors before simulation and lower reproducibly into established representations such as SBML without forcing the user to commit prematurely to one mathematical form?
 
-The metric that matters is not how impressive the vocabulary sounds. It is whether a high-level biological objective can be represented, validated, lowered, simulated, inspected, and reproduced with fewer assumptions leaking across abstraction layers.
+That is a much narrower claim than “a universal programming language for biology,” which is convenient because reality tends to punish slogans eventually.
 
 ## License
 
