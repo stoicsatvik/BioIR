@@ -84,6 +84,15 @@ def check_semantic_model(model: SemanticModel) -> ModelCheckReport:
     if model.version != "bioir/semantic/v1":
         _issue(issues, "error", "version.unsupported", "version", model.version)
 
+    if not SID_RE.fullmatch(model.name):
+        _issue(
+            issues,
+            "error",
+            "model.id_not_portable",
+            "name",
+            "model name must be portable to SBML SId syntax",
+        )
+
     symbol_paths: dict[str, str] = {}
 
     def register(symbol: str, path: str) -> None:
@@ -209,13 +218,25 @@ def check_semantic_model(model: SemanticModel) -> ModelCheckReport:
                 f"{path}.unit",
                 f"unknown unit: {parameter.unit}",
             )
-        if not isfinite(parameter.value):
+        if parameter.value is None:
+            _issue(
+                issues,
+                "warning",
+                "parameter.value_unresolved",
+                f"{path}.value",
+                (
+                    "parameter has no numerical value; structural validation may "
+                    "continue, but an executable kinetic backend must resolve it "
+                    "explicitly"
+                ),
+            )
+        elif not isfinite(parameter.value):
             _issue(
                 issues,
                 "error",
                 "parameter.value",
                 f"{path}.value",
-                "parameter value must be finite",
+                "parameter value must be finite when provided",
             )
 
     entities = {x.id for x in model.entities}
