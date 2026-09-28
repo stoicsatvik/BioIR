@@ -1,5 +1,11 @@
-"""BioIR: user-facing biological semantics with explicit lowering boundaries."""
+"""BioIR: partial biological semantics with explicit assumption boundaries."""
 
+from .completion import (
+    AssumptionReceipt,
+    UnresolvedCommitment,
+    model_fingerprint,
+    plan_executable_completion,
+)
 from .compiler import compile_program
 from .model import Constraints, Objective, OpCode, Operation, Program
 from .runtime import SimulationResult, ToyRuntime
@@ -25,6 +31,7 @@ from .semantic_model import (
 from .validator import ValidationError, validate_program
 
 __all__ = [
+    "AssumptionReceipt",
     "Compartment",
     "Constraints",
     "Entity",
@@ -44,12 +51,15 @@ __all__ = [
     "SemanticValidationError",
     "SimulationResult",
     "ToyRuntime",
+    "UnresolvedCommitment",
     "ValidationError",
     "check_semantic_model",
     "compile_program",
+    "model_fingerprint",
+    "plan_executable_completion",
     "require_valid_semantic_model",
     "to_sbml_xml",
     "validate_program",
 ]
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
