@@ -63,6 +63,27 @@ The first version is deliberately conservative:
 
 This is intentionally less impressive than an auto-model generator. It is also considerably harder to lie with.
 
+
+## Human / AI readability invariant
+
+The canonical representation may be structured, but no scientifically important
+state should be visible only through internal object graphs or opaque compiler
+metadata.
+
+BioIR therefore requires deterministic plain-text views for:
+
+- the biological model;
+- unresolved mathematical commitments;
+- introduced assumptions;
+- provenance and model fingerprint.
+
+The renderer is deliberately a **view**, not another language. This avoids
+recreating Antimony while still making the model and compiler decisions legible
+to humans and AI systems.
+
+A change is incomplete if structured output changes but the readable audit no
+longer exposes the same scientific meaning.
+
 ## Future completion profiles
 
 A future profile may choose mathematics, for example a particular kinetic form.
