@@ -35,13 +35,17 @@ jobs:
       - name: Install package, tests and libSBML
         run: python -m pip install -e ".[test,sbml]"
       - name: Run semantic and completion contract tests
-        run: python -m pytest -q tests/test_semantic_model.py tests/test_completion.py
+        run: python -m pytest -q tests/test_semantic_model.py tests/test_completion.py tests/test_render.py
       - name: Check complete semantic model
         run: python -m bioir check-model examples/toy_semantic_model.json
       - name: Check under-specified semantic model
         run: python -m bioir check-model examples/underspecified_conversion.json
       - name: Emit unresolved mathematical commitments
         run: python -m bioir plan-completion examples/underspecified_conversion.json
+      - name: Render human/AI-readable model
+        run: python -m bioir show-model examples/underspecified_conversion.json
+      - name: Render human/AI-readable completion receipt
+        run: python -m bioir plan-completion examples/underspecified_conversion.json --format text
       - name: Export structural SBML
         run: python -m bioir export-sbml examples/underspecified_conversion.json --out /tmp/bioir-model.xml
       - name: Verify no mathematics was silently invented
