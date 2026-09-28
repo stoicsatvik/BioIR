@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .completion import plan_executable_completion
 from .compiler import compile_program
 from .model import Program
 from .runtime import ToyRuntime
@@ -69,6 +70,13 @@ def _check_model(path: str) -> int:
     return 0 if report.ok else 2
 
 
+def _plan_completion(path: str, target: str) -> int:
+    model = load_semantic_model(path)
+    receipt = plan_executable_completion(model, target=target)
+    print(json.dumps(receipt.to_dict(), indent=2))
+    return 0
+
+
 def _export_sbml(path: str, output: str | None) -> int:
     model = load_semantic_model(path)
     require_valid_semantic_model(model)
@@ -84,21 +92,35 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         prog="bioir",
         description=(
-            "Validate and lower BioIR semantic models; legacy v0 synthetic "
-            "controller commands remain available."
+            "Validate partial biological models, expose unresolved mathematical "
+            "commitments, and lower structural representations without silent "
+            "inference. Legacy v0 synthetic controller commands remain available."
         ),
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
     check_cmd = sub.add_parser(
         "check-model",
-        help="run static checks on a user-facing bioir/semantic/v1 model",
+        help="run structural/unit checks on a bioir/semantic/v1 model",
     )
     check_cmd.add_argument("model")
 
+    completion_cmd = sub.add_parser(
+        "plan-completion",
+        help=(
+            "list unresolved mathematical commitments before an executable "
+            "Antimony/SBML/backend model can be produced"
+        ),
+    )
+    completion_cmd.add_argument("model")
+    completion_cmd.add_argument(
+        "--target",
+        default="antimony-or-sbml-executable",
+    )
+
     sbml_cmd = sub.add_parser(
         "export-sbml",
-        help="lower a validated semantic model to structural SBML",
+        help="lower a validated semantic model to non-inventive structural SBML",
     )
     sbml_cmd.add_argument("model")
     sbml_cmd.add_argument("--out", dest="output")
@@ -119,6 +141,8 @@ def main() -> int:
     try:
         if args.command == "check-model":
             return _check_model(args.model)
+        if args.command == "plan-completion":
+            return _plan_completion(args.model, args.target)
         if args.command == "export-sbml":
             return _export_sbml(args.model, args.output)
         if args.command == "compile":
