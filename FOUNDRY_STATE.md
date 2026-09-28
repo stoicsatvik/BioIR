@@ -1,59 +1,182 @@
 # Unified Foundry State — BioIR
 
 ## Mission
-Build a safe, executable biological abstraction layer that maps high-level biological objectives into typed, inspectable, reproducible intermediate representations and simulation policies, without pretending simulation is equivalent to wet-lab or clinical validation.
+
+Test whether mathematically incomplete but biologically meaningful models can be
+validated, preserved, and completed into established systems-biology
+representations with every newly introduced mathematical assumption explicitly
+audited.
 
 ## Claim status
-NOT YET PROVEN as a biologically valid control layer. The repository currently supports only software/simulation research.
 
-CI INTEGRITY RESULT (2026-09-19): exact PR-head `40be53d8eb76e09e2843f46d80f564b2ee98d9b2` was evaluated by Actions run `35440467009` with corrected pytest discovery. The run collected the intended suite: 34 tests passed and exactly one preregistered temporal-fusion promotion test failed. The failure is the preserved scientific result, not an infrastructure/test-discovery failure: fusion convergence remained 876/1000 versus baseline 963/1000. The new canonical verdict-artifact tests therefore executed and passed in the same run while the rejected promotion gate remained red.
+**NOT YET PROVEN.**
 
-REJECTED by corrected CI on the frozen 1,000-seed matched synthetic experiment: the naïve temporal belief-fusion intervention. Baseline convergence was 963/1000 and fusion convergence was 876/1000. Both baseline and fusion retained zero unsupported-direction decisions, but fusion failed the preregistered strict-improvement gate. The negative result is preserved; do not weaken the gate or tune this intervention against the same frozen seeds.
+BioIR no longer claims novelty for human-readable biological modeling, SBML
+interchange, annotations, modularity, rules, events, or other territory already
+covered by SBML/Antimony tooling.
 
-REJECTED from deterministic benchmark reproduction: universal robustness of the current conservative noisy controller on the frozen synthetic mixture.
+The current novelty hypothesis is narrower and may still fail.
 
-SUPPORTED as executed software contracts: the 34 pytest contracts that passed under corrected discovery on PR #9, including deterministic canonical verdict serialization and preservation of the frozen negative result/seed identities. This is software/simulation evidence only, not biological validation.
+## External-feedback revision — 2026-09-28
 
-NOT YET PROVEN: biological sensing accuracy; causal validity; organism-level behavior; intervention efficacy; wet-lab validity; clinical validity.
+Two systems-biology experts materially changed the project boundary:
 
-## Current stack
-`intent -> objective/state/constraint model -> BioIR -> uncertainty-aware compiler/controller -> simulation backend -> observation -> feedback`
+1. The user-facing abstraction should not be a hidden IR, and mathematical
+   representation should be delayed until needed.
+2. Antimony is direct prior art for human-readable SBML-oriented model
+   definitions, so BioIR must compare against it rather than reinvent it.
 
-## Current v0 capabilities
-- Typed program/state/objective/constraint representation.
-- Small semantic ISA: SENSE, INCREASE, DECREASE, MAINTAIN, WAIT.
-- Compiler from high-level goals to abstract operations.
-- Closed-loop toy runtime with repeated sensing, planning, action, and re-observation.
-- `BeliefValue(mean, uncertainty)` with bounded intervals and conservative directional predicates.
-- Matched exact/noisy synthetic benchmark and per-seed failure retention.
-- Descriptive failure summaries.
-- Experimental temporal belief-fusion controller, now REJECTED under its frozen promotion gate.
-- Canonical `bioir/fusion-verdict/v1` machine-readable artifact with deterministic byte serialization, frozen experiment boundary, convergence/unsupported-direction metrics, and recovered/regressed seed identities.
+Resulting architecture:
 
-## CI integrity repair
-Branch `foundry/v02-ci-falsification-integrity` installs an explicit pytest test extra and executes `python -m pytest -q`. PR #9 run `35440467009` further demonstrates that the corrected pipeline executes both the canonical-artifact contracts and the deliberately failing falsification gate in one suite.
+```text
+partial biological semantics
+        ↓
+structural/unit validation
+        ↓
+unresolved commitment receipt
+        ↓
+explicit completion profile (future)
+        ↓
+assumption receipt
+        ↓
+Antimony / SBML / executable backend
+```
 
-## Historical evidence audit
-Historical workflows #2-#14 may still be useful for package installation and CLI smoke-test evidence, but they are not accepted as proof that pytest-style falsification functions executed. Their green status must not be cited as test-suite validation without corrected reruns.
+## What was removed from the novelty claim
 
-## Frozen quantitative result
-Corrected pytest execution preserved the frozen baseline at 963/1000 convergence and measured the temporal-fusion candidate at 876/1000. Baseline unsupported-direction decisions: 0. Fusion unsupported-direction decisions: 0. The intervention therefore preserves the directional-safety property in this toy simulator but materially worsens convergence and is REJECTED by the preregistered promotion rule.
+BioIR does not claim novelty for:
+
+- human-readable reaction syntax;
+- SBML conversion/interchange;
+- model modularity;
+- rules/events;
+- annotations by themselves;
+- FBC support;
+- uncertainty/distribution syntax;
+- layout/render;
+- generic systems-biology model authoring.
+
+See `docs/antimony_positioning.md`.
+
+## Semantic-model frontier
+
+Branch: `foundry/semantic-model-sbml-v1`
+
+Current capabilities:
+
+- typed compartments and biological entities;
+- amount/concentration semantics;
+- explicit units;
+- parameters whose numerical values may remain unresolved;
+- interaction topology and stoichiometry;
+- modifiers and provenance;
+- static reference/unit/model checks;
+- structural SBML Level 3 Version 2 lowering;
+- omission of unknown parameter values rather than fabrication;
+- deliberate omission of kinetic laws;
+- deterministic model fingerprinting;
+- fail-closed completion planner;
+- machine-readable unresolved mathematical commitments.
+
+## Completion receipt invariant
+
+For an under-specified model, the planner records what is missing before a
+kinetic/executable backend can exist.
+
+Example:
+
+```text
+parameter_value:k1
+kinetic_law:A_to_B
+```
+
+The current planner introduces **zero assumptions automatically**.
+
+Any future completion profile must record exactly which commitments it resolves
+and what assumption supplied the missing mathematics.
+
+
+## Human / AI readability invariant
+
+The canonical semantic model remains structured data, but every scientifically
+important state must also have a deterministic plain-text rendering that a
+person or AI system can inspect directly.
+
+Current readable views expose:
+
+- compartments and entities;
+- units and initial quantities;
+- parameter values or explicit `unresolved` state;
+- interaction topology;
+- unresolved kinetic laws;
+- provenance;
+- model fingerprint;
+- unresolved commitments;
+- introduced assumptions.
+
+The renderer is a view of the canonical model/receipt, **not a new modeling
+language**. BioIR must not recreate Antimony merely to satisfy readability.
+
+CLI:
+
+```bash
+python -m bioir show-model examples/underspecified_conversion.json
+python -m bioir plan-completion examples/underspecified_conversion.json --format text
+```
+
+## SBML / Antimony boundary
+
+SBML is an interoperability target.
+
+Antimony is established prior art and a likely downstream/human-facing layer,
+not something BioIR should reimplement.
+
+The existing structural SBML example has passed libSBML consistency validation.
+This does not establish broad round-trip preservation or unique BioIR value.
+
+## Kill criterion
+
+If Antimony/SBML plus a thin validation/provenance layer can provide equivalent:
+
+- partial-model representation;
+- static diagnostics;
+- unresolved-commitment tracking;
+- assumption auditing;
+- round-trip preservation;
+
+then BioIR should stop being developed as a standalone language.
+
+The surviving project would become tooling on top of the established ecosystem.
+
+## Historical controller evidence
+
+The earlier synthetic controller research remains preserved:
+
+- baseline convergence: 963/1000;
+- temporal-fusion convergence: 876/1000;
+- unsupported-direction decisions: 0 for both;
+- temporal-fusion intervention remains REJECTED by its frozen promotion rule.
+
+That negative evidence is unrelated to the Antimony/SBML positioning change and
+must remain visible.
+
+## Current evaluation plan
+
+1. Build a frozen corpus of complete, partial, and intentionally invalid models.
+2. Test direct representability in SBML and Antimony.
+3. Compare diagnostics against established tooling.
+4. Round-trip models and measure semantic loss.
+5. Measure whether explicit unresolved-commitment receipts add information.
+6. Only then implement completion profiles.
+7. If the assumption-audit layer provides no meaningful advantage, collapse
+   BioIR into an Antimony/SBML tooling layer.
 
 ## Hard boundary
-BioIR remains simulation-first and safety-constrained.
-- No nucleotide-sequence generation for harmful biological engineering.
+
+BioIR remains modeling/simulation-only.
+
+- No harmful biological sequence generation.
 - No pathogen engineering or optimization.
 - No wet-lab procedural protocols.
 - No autonomous real-world biological actuation.
-- No human/animal experimentation instructions.
 - No patient-specific treatment or clinical decision system.
-- Toy or computational success must never be promoted as organism-level or clinical evidence.
-
-## Evaluation doctrine
-Every substantial change should answer a falsifiable question and preserve a baseline. Primary software metrics include deterministic replay, target attainment, unsupported-direction decisions, WAIT/deferral cost, convergence time, oscillation, budget use, failure identities, and regression seeds. Test discovery itself is part of the evidence chain: a green CI job is insufficient unless the intended tests are demonstrably collected and executed. A failing preregistered promotion test is valid evidence and must not be rewritten merely to restore green CI.
-
-## Current blocker
-The naïve temporal-fusion path is empirically rejected on the frozen seed set. Further tuning against those same 1,000 seeds would contaminate the evaluation frontier. The full workflow remains intentionally red because the preserved promotion assertion correctly rejects the candidate; this is evidence, not a request to weaken the test.
-
-## Current next move
-Preregister a materially different controller candidate and a sealed seed mixture before implementation/evaluation. Keep the rejected 0..999 temporal-fusion experiment immutable and use its canonical verdict artifact only as historical evidence. Biological validity remains NOT YET PROVEN regardless of simulator outcome.

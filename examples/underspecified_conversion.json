@@ -1,0 +1,50 @@
+{
+  "version": "bioir/semantic/v1",
+  "name": "underspecified_conversion",
+  "compartments": [
+    {
+      "id": "cell",
+      "size": 1.0,
+      "unit": "litre"
+    }
+  ],
+  "entities": [
+    {
+      "id": "A",
+      "compartment": "cell",
+      "initial_value": 1.0,
+      "quantity_kind": "concentration",
+      "unit": "mole_per_litre"
+    },
+    {
+      "id": "B",
+      "compartment": "cell",
+      "initial_value": 0.0,
+      "quantity_kind": "concentration",
+      "unit": "mole_per_litre"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "k1",
+      "unit": "per_second"
+    }
+  ],
+  "interactions": [
+    {
+      "id": "A_to_B",
+      "kind": "conversion",
+      "inputs": [
+        {"entity": "A"}
+      ],
+      "outputs": [
+        {"entity": "B"}
+      ],
+      "parameter_refs": ["k1"]
+    }
+  ],
+  "provenance": {
+    "source": "synthetic under-specified model",
+    "notes": "Parameter value and kinetic law are intentionally unknown."
+  }
+}
