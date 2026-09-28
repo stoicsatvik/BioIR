@@ -34,28 +34,33 @@ jobs:
           python-version: "3.11"
       - name: Install package, tests and libSBML
         run: python -m pip install -e ".[test,sbml]"
-      - name: Run semantic-model contract tests
-        run: python -m pytest -q tests/test_semantic_model.py
-      - name: Check user-facing model before simulation
+      - name: Run semantic and completion contract tests
+        run: python -m pytest -q tests/test_semantic_model.py tests/test_completion.py
+      - name: Check complete semantic model
         run: python -m bioir check-model examples/toy_semantic_model.json
+      - name: Check under-specified semantic model
+        run: python -m bioir check-model examples/underspecified_conversion.json
+      - name: Emit unresolved mathematical commitments
+        run: python -m bioir plan-completion examples/underspecified_conversion.json
       - name: Export structural SBML
-        run: python -m bioir export-sbml examples/toy_semantic_model.json --out /tmp/bioir-model.xml
-      - name: Verify mathematical commitment is absent
+        run: python -m bioir export-sbml examples/underspecified_conversion.json --out /tmp/bioir-model.xml
+      - name: Verify no mathematics was silently invented
         run: |
           python - <<'PY'
           from pathlib import Path
           xml = Path("/tmp/bioir-model.xml").read_text()
           assert "<kineticLaw" not in xml
           assert "mathematicalRepresentationCommitted=\"false\"" in xml
-          print("semantic/SBML boundary verified")
+          assert 'id="k1"' in xml
+          assert 'id="k1" value=' not in xml
+          print("no hidden kinetics or parameter value introduced")
           PY
       - name: Validate generated document with libSBML
         run: |
           python - <<'PY'
           import libsbml
 
-          path = "/tmp/bioir-model.xml"
-          document = libsbml.readSBML(path)
+          document = libsbml.readSBML("/tmp/bioir-model.xml")
           document.checkConsistency()
 
           serious = []
@@ -75,6 +80,7 @@ jobs:
           assert model.getNumSpecies() == 2
           assert model.getNumParameters() == 1
           assert model.getNumReactions() == 1
+          assert model.getParameter("k1").isSetValue() is False
           assert model.getReaction(0).isSetKineticLaw() is False
-          print("libSBML validation passed with no error-severity findings")
+          print("libSBML accepted under-specified structural model")
           PY
