@@ -8,6 +8,7 @@ from .completion import (
 )
 from .compiler import compile_program
 from .model import Constraints, Objective, OpCode, Operation, Program
+from .render import render_model_human, render_receipt_human
 from .runtime import SimulationResult, ToyRuntime
 from .sbml_backend import to_sbml_xml
 from .semantic_checks import (
@@ -57,9 +58,11 @@ __all__ = [
     "compile_program",
     "model_fingerprint",
     "plan_executable_completion",
+    "render_model_human",
+    "render_receipt_human",
     "require_valid_semantic_model",
     "to_sbml_xml",
     "validate_program",
 ]
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
