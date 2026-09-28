@@ -73,11 +73,11 @@ def _species_substance_unit(model_unit: str) -> str:
 
 
 def to_sbml_xml(model: SemanticModel) -> str:
-    """Lower the user-facing semantic model to structural SBML Level 3 Version 2.
+    """Lower a validated semantic model to structural SBML Level 3 Version 2.
 
-    This backend intentionally emits no KineticLaw by default. It preserves
-    entities, compartments, parameters and interaction topology while deferring
-    mathematical kinetics to a later compile-time profile.
+    This exporter is deliberately non-executable by default. It does not invent
+    a KineticLaw or missing parameter values. Those commitments belong to an
+    explicit completion/lowering profile and must be auditable separately.
     """
 
     require_valid_semantic_model(model)
@@ -147,10 +147,11 @@ def to_sbml_xml(model: SemanticModel) -> str:
         for parameter in sorted(model.parameters, key=lambda x: x.id):
             attrs = {
                 "id": parameter.id,
-                "value": f"{parameter.value:.17g}",
                 "units": parameter.unit,
                 "constant": "true" if parameter.constant else "false",
             }
+            if parameter.value is not None:
+                attrs["value"] = f"{parameter.value:.17g}"
             if parameter.name:
                 attrs["name"] = parameter.name
             ET.SubElement(parameter_list, _tag("parameter"), attrs)
