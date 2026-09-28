@@ -1,102 +1,104 @@
 # BioIR architecture
 
-BioIR's primary abstraction is now the **model the user works with**, not a hidden compiler-only IR.
+## Architecture after SBML / Antimony review
 
-The design rule is:
+BioIR is no longer framed as a new high-level biological modeling language.
 
-```text
-user-facing biological semantics
-        ↓
-static checks and metadata validation
-        ↓
-compile-time lowering boundary
-        ↓
-SBML / simulator representation / future backend
-```
+Antimony and SBML already cover substantial territory around human-readable model specification, model exchange, annotations, modularity, events, rules, and multiple SBML Level 3 modeling features.
 
-The semantic layer should preserve biological meaning while delaying commitment to a particular mathematical representation until a backend actually needs one.
-
-## User-facing semantic model
-
-`bioir/semantic/v1` represents:
-
-- compartments;
-- biological entities;
-- initial quantities;
-- amount/concentration semantics;
-- explicit units;
-- parameters as named metadata;
-- interaction topology;
-- stoichiometry;
-- modifiers;
-- constraints implied by typed references;
-- provenance.
-
-The semantic model deliberately does **not** contain an ODE, MathML expression, rate law or backend-specific solver choice. In v1, trying to place fields such as `rate_law`, `kinetic_law`, `ode` or `math` inside an interaction is rejected.
-
-This is intentional. The user authors the biology-level representation; a later lowering profile chooses the mathematics.
-
-## Static model checks
-
-Before any simulation or backend lowering, BioIR checks:
-
-1. identifier portability and collisions;
-2. compartment existence;
-3. reference integrity;
-4. finite/non-negative initial quantities;
-5. finite parameter values;
-6. positive stoichiometry;
-7. quantity-kind/unit dimensional compatibility;
-8. parameter references;
-9. provenance presence as a warning.
-
-The current unit system is deliberately small and explicit. It is a compiler contract, not an attempt to replace a real ontology.
-
-## Compile-time lowering
-
-A backend receives a validated semantic model and chooses how to represent it.
-
-The first interoperability backend emits a structural **SBML Level 3 Version 2 Core** document containing compartments, species, parameters and reactions.
-
-Crucially, the default SBML backend emits **no kinetic law**. Interaction topology and parameter references are preserved, while mathematical kinetics remain uncommitted. A future compilation profile can choose a mathematical realization explicitly and audibly.
-
-## Relationship to existing BioIR controller work
-
-The earlier v0 controller path remains preserved:
+The current architecture therefore focuses only on the boundary that still needs to be tested:
 
 ```text
-objective/state model
-  ↓
-SENSE / INCREASE / DECREASE / MAINTAIN / WAIT
-  ↓
-synthetic closed-loop runtime
+biologically meaningful partial model
+        ↓
+static validity checks
+        ↓
+explicit unresolved commitments
+        ↓
+completion profile (future)
+        ↓
+assumption receipt
+        ↓
+Antimony / SBML / simulator
 ```
 
-That work is still useful for uncertainty and controller falsification experiments, but it is no longer the whole definition of BioIR.
+## Two kinds of failure
 
-Architecturally, it becomes one possible downstream research path rather than the user-facing abstraction itself.
+BioIR now distinguishes:
 
-## Backend contract
+### 1. Invalid structure
 
-Backends must:
+Examples:
 
-- consume a statically valid semantic model;
-- declare what mathematical assumptions they introduce;
-- preserve provenance;
-- fail closed when required semantics cannot be represented;
-- never silently change units or identifiers;
-- keep real-world actuation outside this repository.
+- reference to a missing species;
+- invalid compartment;
+- incompatible units;
+- duplicate identifiers;
+- invalid stoichiometry.
 
-## Safety boundary
+These are hard errors.
 
-BioIR remains simulation/modeling-only. It does not emit wet-lab procedures, biological sequences for synthesis, pathogen optimization, patient-specific treatment instructions, or autonomous physical actuation.
+### 2. Valid but incomplete mathematics
 
-## Next technical milestones
+Examples:
 
-1. compile-time kinetics profiles with explicit assumption receipts;
-2. round-trip checks against established SBML tooling;
-3. richer unit definitions and ontology references;
-4. semantic equivalence tests across multiple backends;
-5. provenance receipts for every lowering decision;
-6. explicit model uncertainty that survives lowering;
-7. a compact textual syntax over the same semantic model, rather than a second hidden representation.
+- a parameter has identity and units but no numerical value;
+- an interaction is known biologically but no kinetic law has been chosen.
+
+These can remain valid semantic-model states.
+
+They block an executable kinetic backend, but they should not be disguised as structural corruption.
+
+## Completion planner
+
+`bioir.completion.plan_executable_completion` produces an `AssumptionReceipt`.
+
+The first version is deliberately conservative:
+
+- it fingerprints the exact semantic model;
+- lists missing parameter values;
+- lists interactions whose kinetic laws remain unresolved;
+- records **zero introduced assumptions**;
+- never guesses a mathematical law.
+
+This is intentionally less impressive than an auto-model generator. It is also considerably harder to lie with.
+
+## Future completion profiles
+
+A future profile may choose mathematics, for example a particular kinetic form.
+
+Such a profile must record:
+
+- which model fingerprint it acted on;
+- which commitment it resolved;
+- the exact assumption introduced;
+- the source of that assumption;
+- any new parameter/value required;
+- the downstream target.
+
+A completed model without that receipt violates the architecture.
+
+## Interoperability
+
+SBML and Antimony are established ecosystem components, not competitors to defeat.
+
+BioIR's current structural SBML exporter exists to test preservation and interoperability.
+
+Antimony should be evaluated as a likely human-facing/downstream representation rather than reimplemented.
+
+## Kill criterion
+
+If existing Antimony/SBML tooling plus a thin validation/provenance library can:
+
+- represent the same partial models;
+- surface equivalent diagnostics;
+- preserve unresolved commitments;
+- record completion assumptions;
+
+with no meaningful disadvantage, BioIR should stop existing as a standalone language.
+
+The useful artifact would then be the validation/assumption-audit layer itself.
+
+## Historical controller work
+
+The v0 synthetic controller experiments remain preserved as a separate research line. Their positive and negative results must not be rewritten to fit the new modeling architecture.
