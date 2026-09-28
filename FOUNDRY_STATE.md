@@ -2,122 +2,152 @@
 
 ## Mission
 
-Build a safe, user-facing biological abstraction that preserves biological structure, units, metadata and provenance, performs useful checks before simulation, and lowers explicitly into established modeling/simulation backends without silently committing the user to one mathematical representation.
+Test whether mathematically incomplete but biologically meaningful models can be
+validated, preserved, and completed into established systems-biology
+representations with every newly introduced mathematical assumption explicitly
+audited.
 
 ## Claim status
 
-NOT YET PROVEN as a biologically valid abstraction or control layer. The repository supports software/modeling experiments only.
+**NOT YET PROVEN.**
 
-The historical controller research remains part of the evidence record:
+BioIR no longer claims novelty for human-readable biological modeling, SBML
+interchange, annotations, modularity, rules, events, or other territory already
+covered by SBML/Antimony tooling.
 
-- corrected CI preserved the frozen 1,000-seed temporal-fusion result;
-- baseline convergence: 963/1000;
-- temporal fusion convergence: 876/1000;
-- unsupported-direction decisions: 0 for both;
-- the temporal-fusion intervention remains REJECTED by its frozen promotion rule;
-- the rejected 0..999 seed population must not be reused for tuning.
+The current novelty hypothesis is narrower and may still fail.
 
-Negative evidence is retained.
+## External-feedback revision — 2026-09-28
 
-## Architecture revision — 2026-09-27
+Two systems-biology experts materially changed the project boundary:
 
-BioIR is being re-centered around a stronger abstraction boundary:
+1. The user-facing abstraction should not be a hidden IR, and mathematical
+   representation should be delayed until needed.
+2. Antimony is direct prior art for human-readable SBML-oriented model
+   definitions, so BioIR must compare against it rather than reinvent it.
+
+Resulting architecture:
 
 ```text
-user-facing semantic model
+partial biological semantics
         ↓
-static checks
+structural/unit validation
         ↓
-compile-time lowering
+unresolved commitment receipt
         ↓
-SBML / simulator / future backend
+explicit completion profile (future)
+        ↓
+assumption receipt
+        ↓
+Antimony / SBML / executable backend
 ```
 
-The abstraction itself is what the user should work with. A hidden internal IR sitting beneath another user model is no longer the architectural goal.
+## What was removed from the novelty claim
 
-The semantic layer should preserve biological meaning while delaying commitment to a particular mathematical realization until compilation.
+BioIR does not claim novelty for:
 
-## Semantic model v1 — current branch
+- human-readable reaction syntax;
+- SBML conversion/interchange;
+- model modularity;
+- rules/events;
+- annotations by themselves;
+- FBC support;
+- uncertainty/distribution syntax;
+- layout/render;
+- generic systems-biology model authoring.
+
+See `docs/antimony_positioning.md`.
+
+## Semantic-model frontier
 
 Branch: `foundry/semantic-model-sbml-v1`
 
-Added:
+Current capabilities:
 
-- typed compartments;
-- biological entities;
+- typed compartments and biological entities;
 - amount/concentration semantics;
 - explicit units;
-- parameters;
-- interaction topology;
-- stoichiometry;
-- modifiers;
-- provenance;
+- parameters whose numerical values may remain unresolved;
+- interaction topology and stoichiometry;
+- modifiers and provenance;
 - static reference/unit/model checks;
 - structural SBML Level 3 Version 2 lowering;
-- deliberate omission of kinetic laws by default;
-- CLI model checking and SBML export;
-- deterministic tests for delayed mathematical commitment.
+- omission of unknown parameter values rather than fabrication;
+- deliberate omission of kinetic laws;
+- deterministic model fingerprinting;
+- fail-closed completion planner;
+- machine-readable unresolved mathematical commitments.
 
-Validation: implementation head `093c7e26b20e725baf9e9188fc5f2548cb9b5ba1` passed the dedicated `semantic-model-v1` job in Actions run `36340456380`. Seven semantic-model tests passed; the CLI static check reported zero errors/warnings; structural SBML export succeeded; the no-hidden-kinetics contract passed; and libSBML reported no error-severity findings.
+## Completion receipt invariant
 
-## Mathematical commitment boundary
+For an under-specified model, the planner records what is missing before a
+kinetic/executable backend can exist.
 
-`bioir/semantic/v1` rejects embedded `rate_law`, `kinetic_law`, `ode`, `math` and `mathml` fields in interactions.
-
-A later backend profile may introduce mathematics, but that assumption must be explicit at compile time and must not be confused with biology-level semantics.
-
-## SBML boundary
-
-SBML is treated as an interoperability/lowering target, not something BioIR needs to replace.
-
-The current exporter covers a narrow structural subset: model, compartments, species, parameters, reactions, species references, modifier references and supported unit definitions.
-
-The generated example has passed a libSBML consistency check with no error-severity findings. Broader SBML conformance, richer models, package coverage, and round-trip semantic preservation remain NOT YET PROVEN.
-
-## Existing controller stack
-
-The legacy synthetic controller path remains preserved:
+Example:
 
 ```text
-objective/state/constraint model
-  ↓
-uncertainty-aware compiler/controller
-  ↓
-SENSE / INCREASE / DECREASE / MAINTAIN / WAIT
-  ↓
-synthetic closed-loop runtime
+parameter_value:k1
+kinetic_law:A_to_B
 ```
 
-It is now treated as one downstream research path rather than the entire definition of BioIR.
+The current planner introduces **zero assumptions automatically**.
+
+Any future completion profile must record exactly which commitments it resolves
+and what assumption supplied the missing mathematics.
+
+## SBML / Antimony boundary
+
+SBML is an interoperability target.
+
+Antimony is established prior art and a likely downstream/human-facing layer,
+not something BioIR should reimplement.
+
+The existing structural SBML example has passed libSBML consistency validation.
+This does not establish broad round-trip preservation or unique BioIR value.
+
+## Kill criterion
+
+If Antimony/SBML plus a thin validation/provenance layer can provide equivalent:
+
+- partial-model representation;
+- static diagnostics;
+- unresolved-commitment tracking;
+- assumption auditing;
+- round-trip preservation;
+
+then BioIR should stop being developed as a standalone language.
+
+The surviving project would become tooling on top of the established ecosystem.
+
+## Historical controller evidence
+
+The earlier synthetic controller research remains preserved:
+
+- baseline convergence: 963/1000;
+- temporal-fusion convergence: 876/1000;
+- unsupported-direction decisions: 0 for both;
+- temporal-fusion intervention remains REJECTED by its frozen promotion rule.
+
+That negative evidence is unrelated to the Antimony/SBML positioning change and
+must remain visible.
+
+## Current evaluation plan
+
+1. Build a frozen corpus of complete, partial, and intentionally invalid models.
+2. Test direct representability in SBML and Antimony.
+3. Compare diagnostics against established tooling.
+4. Round-trip models and measure semantic loss.
+5. Measure whether explicit unresolved-commitment receipts add information.
+6. Only then implement completion profiles.
+7. If the assumption-audit layer provides no meaningful advantage, collapse
+   BioIR into an Antimony/SBML tooling layer.
 
 ## Hard boundary
 
-BioIR remains simulation/modeling-first and safety-constrained.
+BioIR remains modeling/simulation-only.
 
-- No nucleotide-sequence generation for harmful biological engineering.
+- No harmful biological sequence generation.
 - No pathogen engineering or optimization.
 - No wet-lab procedural protocols.
 - No autonomous real-world biological actuation.
-- No human/animal experimentation instructions.
 - No patient-specific treatment or clinical decision system.
-- Computational success must never be promoted as organism-level or clinical evidence.
-
-## Evaluation doctrine
-
-Every substantive change should answer a falsifiable question and preserve failures.
-
-For the semantic-model frontier, primary software questions are:
-
-1. Can malformed references and unit mismatches be caught before simulation?
-2. Can one user-facing semantic model lower deterministically?
-3. Does lowering preserve compartments, entities, quantities, interactions and metadata?
-4. Can mathematical assumptions remain absent until an explicit compilation profile introduces them?
-5. Can generated SBML pass established external validation without weakening the semantic contract?
-
-## Current blocker
-
-The first generated structural document passes libSBML consistency checking, but that is only one bounded example. Multi-model round-trip interoperability and semantic preservation across established SBML tooling remain unvalidated.
-
-## Current next move
-
-Expand the interoperability benchmark beyond one toy model: generate multiple typed semantic models, round-trip them through established SBML tooling, compare recovered compartments/species/parameters/reaction topology, and preserve any semantic loss. Only after that add explicit compile-time kinetics profiles with assumption/provenance receipts.
