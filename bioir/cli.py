@@ -7,6 +7,7 @@ from pathlib import Path
 from .completion import plan_executable_completion
 from .compiler import compile_program
 from .model import Program
+from .render import render_model_human, render_receipt_human
 from .runtime import ToyRuntime
 from .sbml_backend import to_sbml_xml
 from .semantic_checks import (
@@ -70,10 +71,20 @@ def _check_model(path: str) -> int:
     return 0 if report.ok else 2
 
 
-def _plan_completion(path: str, target: str) -> int:
+def _show_model(path: str) -> int:
+    model = load_semantic_model(path)
+    require_valid_semantic_model(model)
+    print(render_model_human(model), end="")
+    return 0
+
+
+def _plan_completion(path: str, target: str, output_format: str) -> int:
     model = load_semantic_model(path)
     receipt = plan_executable_completion(model, target=target)
-    print(json.dumps(receipt.to_dict(), indent=2))
+    if output_format == "text":
+        print(render_receipt_human(receipt), end="")
+    else:
+        print(json.dumps(receipt.to_dict(), indent=2))
     return 0
 
 
@@ -93,8 +104,8 @@ def main() -> int:
         prog="bioir",
         description=(
             "Validate partial biological models, expose unresolved mathematical "
-            "commitments, and lower structural representations without silent "
-            "inference. Legacy v0 synthetic controller commands remain available."
+            "commitments, render them in human/AI-readable form, and lower "
+            "structural representations without silent inference."
         ),
     )
     sub = parser.add_subparsers(dest="command", required=True)
@@ -104,6 +115,12 @@ def main() -> int:
         help="run structural/unit checks on a bioir/semantic/v1 model",
     )
     check_cmd.add_argument("model")
+
+    show_cmd = sub.add_parser(
+        "show-model",
+        help="render the canonical structured model as deterministic plain text",
+    )
+    show_cmd.add_argument("model")
 
     completion_cmd = sub.add_parser(
         "plan-completion",
@@ -116,6 +133,12 @@ def main() -> int:
     completion_cmd.add_argument(
         "--target",
         default="antimony-or-sbml-executable",
+    )
+    completion_cmd.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="json",
+        dest="output_format",
     )
 
     sbml_cmd = sub.add_parser(
@@ -141,8 +164,10 @@ def main() -> int:
     try:
         if args.command == "check-model":
             return _check_model(args.model)
+        if args.command == "show-model":
+            return _show_model(args.model)
         if args.command == "plan-completion":
-            return _plan_completion(args.model, args.target)
+            return _plan_completion(args.model, args.target, args.output_format)
         if args.command == "export-sbml":
             return _export_sbml(args.model, args.output)
         if args.command == "compile":
