@@ -63,16 +63,17 @@ class Entity:
 @dataclass(frozen=True)
 class Parameter:
     id: str
-    value: float
+    value: float | None = None
     unit: str = "dimensionless"
     constant: bool = True
     name: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Parameter":
+        raw_value = data.get("value")
         return cls(
             id=str(data["id"]),
-            value=float(data["value"]),
+            value=float(raw_value) if raw_value is not None else None,
             unit=str(data.get("unit", "dimensionless")),
             constant=bool(data.get("constant", True)),
             name=str(data["name"]) if data.get("name") is not None else None,
