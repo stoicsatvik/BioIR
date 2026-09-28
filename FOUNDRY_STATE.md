@@ -95,6 +95,35 @@ The current planner introduces **zero assumptions automatically**.
 Any future completion profile must record exactly which commitments it resolves
 and what assumption supplied the missing mathematics.
 
+
+## Human / AI readability invariant
+
+The canonical semantic model remains structured data, but every scientifically
+important state must also have a deterministic plain-text rendering that a
+person or AI system can inspect directly.
+
+Current readable views expose:
+
+- compartments and entities;
+- units and initial quantities;
+- parameter values or explicit `unresolved` state;
+- interaction topology;
+- unresolved kinetic laws;
+- provenance;
+- model fingerprint;
+- unresolved commitments;
+- introduced assumptions.
+
+The renderer is a view of the canonical model/receipt, **not a new modeling
+language**. BioIR must not recreate Antimony merely to satisfy readability.
+
+CLI:
+
+```bash
+python -m bioir show-model examples/underspecified_conversion.json
+python -m bioir plan-completion examples/underspecified_conversion.json --format text
+```
+
 ## SBML / Antimony boundary
 
 SBML is an interoperability target.
