@@ -1,57 +1,76 @@
 # BioIR
 
-**BioIR is an experimental, user-facing semantic model for biological systems with explicit compile-time lowering into simulation and interoperability backends.**
+**BioIR is an experiment in representing biologically meaningful but mathematically incomplete models without silently inventing the missing mathematics.**
 
-The central design has changed:
+After comparing the project against SBML and Antimony, BioIR is **not** positioned as a new human-readable modeling language or as a replacement for either standard.
+
+The current research boundary is:
 
 ```text
-user works with BioIR semantic model
-              ↓
-      static model checks
-              ↓
-     compile-time lowering
-              ↓
-   SBML / simulator / backend
+partial biological semantics
+        ↓
+static structural / unit checks
+        ↓
+completion plan
+        ↓
+explicit assumption receipt
+        ↓
+Antimony / SBML / executable backend
 ```
 
-The BioIR abstraction is not supposed to be hidden behind another modeling language. It is the representation the user directly authors and inspects.
+## What BioIR is not trying to reinvent
 
-## Why this boundary
+Antimony already provides a human-readable systems-biology language with bidirectional SBML translation and substantial SBML Level 3 support. SBML already provides the core exchange/model representation plus packages for additional modeling formalisms.
 
-A biological model should be able to carry compartments, entities, units, parameters, interaction topology, stoichiometry and provenance **before** committing to one mathematical realization.
+BioIR therefore does **not** claim novelty for:
 
-That enables checks such as:
+- human-readable reaction syntax;
+- SBML interchange;
+- rules or events;
+- model modularity;
+- biological annotations by themselves;
+- uncertainty/distribution syntax;
+- layout/render support;
+- flux-balance modeling.
 
-- does every entity live in a real compartment?
-- are identifiers unique and portable?
-- do concentration variables actually use concentration units?
-- do interactions reference existing entities and parameters?
-- is stoichiometry positive?
-- is provenance present?
+See `docs/antimony_positioning.md` for the explicit overlap and kill criteria.
 
-Only after those checks does a backend choose how to lower the model.
+## Current hypothesis
 
-## Semantic model v1
+The narrower question is:
 
-A small example:
+> Can a partial biological model remain useful before it is mathematically complete, and can every assumption introduced while making it executable be exposed and audited?
+
+A model can therefore state:
+
+- compartments and entities;
+- interaction topology;
+- units;
+- stoichiometry;
+- parameter identity and units;
+- provenance;
+
+while intentionally leaving a parameter value or kinetic law unresolved.
+
+For example:
 
 ```json
 {
   "version": "bioir/semantic/v1",
-  "name": "toy_conversion",
+  "name": "underspecified_conversion",
   "compartments": [
     {"id": "cell", "size": 1.0, "unit": "litre"}
   ],
   "entities": [
     {
-      "id": "substrate",
+      "id": "A",
       "compartment": "cell",
       "initial_value": 1.0,
       "quantity_kind": "concentration",
       "unit": "mole_per_litre"
     },
     {
-      "id": "product",
+      "id": "B",
       "compartment": "cell",
       "initial_value": 0.0,
       "quantity_kind": "concentration",
@@ -59,88 +78,101 @@ A small example:
     }
   ],
   "parameters": [
-    {"id": "k1", "value": 0.1, "unit": "per_second"}
+    {"id": "k1", "unit": "per_second"}
   ],
   "interactions": [
     {
-      "id": "conversion_1",
+      "id": "A_to_B",
       "kind": "conversion",
-      "inputs": [{"entity": "substrate"}],
-      "outputs": [{"entity": "product"}],
+      "inputs": [{"entity": "A"}],
+      "outputs": [{"entity": "B"}],
       "parameter_refs": ["k1"]
     }
   ]
 }
 ```
 
-Notice what is missing: there is no ODE and no rate-law expression.
+The missing `k1` value is not automatically filled in. A kinetic law is not inferred.
 
-In `bioir/semantic/v1`, embedding fields such as `rate_law`, `kinetic_law`, `ode`, `math` or `mathml` in the user model is rejected. Mathematical commitment belongs at the lowering boundary.
-
-## Check before simulation
+## Static validation
 
 ```bash
-python -m bioir check-model examples/toy_semantic_model.json
+python -m bioir check-model examples/underspecified_conversion.json
 ```
 
-BioIR runs static structural and dimensional checks without needing a simulator.
+Structural invalidity remains an error. Mathematical incompleteness is reported separately when it can legally remain unresolved.
 
-## SBML interoperability
+Examples of structural checks include:
 
-The first lowering backend exports a structural SBML Level 3 Version 2 Core document:
+- invalid or duplicate identifiers;
+- unknown compartments;
+- broken entity/parameter references;
+- incompatible quantity units;
+- invalid stoichiometry;
+- non-finite supplied values.
+
+## Completion receipt
 
 ```bash
-python -m bioir export-sbml examples/toy_semantic_model.json --out model.xml
+python -m bioir plan-completion examples/underspecified_conversion.json
 ```
 
-The current exporter preserves:
+The planner emits a deterministic receipt containing the model fingerprint and unresolved commitments, for example:
 
-- compartments;
-- species;
-- initial amount/concentration semantics;
-- parameters and supported units;
-- reactions and stoichiometry;
-- modifiers;
-- BioIR interaction metadata and parameter references.
+```text
+unresolved:
+  parameter_value:k1
+  kinetic_law:A_to_B
 
-It intentionally emits **no kinetic law by default**. That is how the current experiment tests delayed commitment to mathematical representation.
+introduced_assumptions: []
+```
 
-This exporter is a bounded interoperability prototype. Full conformance against established SBML validation tooling is the next gate, not something this README gets to declare by confidence.
+The important invariant is that **BioIR does not silently convert missing biological knowledge into mathematical certainty**.
+
+A future explicit compilation profile may resolve those commitments, but each added assumption must be recorded.
+
+## Structural SBML export
+
+```bash
+python -m bioir export-sbml examples/underspecified_conversion.json --out model.xml
+```
+
+The current exporter preserves compatible structure without inventing missing parameter values or a `KineticLaw`.
+
+This makes SBML an interoperability target, not an adversary.
+
+The existing exporter has already been checked with libSBML on the current toy model. Broader round-trip equivalence is still an open experiment.
+
+## Antimony relationship
+
+Antimony is treated as established prior art and a likely downstream/interoperability layer.
+
+BioIR must earn its existence by demonstrating value around explicit incompleteness, diagnostics, and assumption auditing that is not already handled adequately by Antimony/SBML tooling.
+
+If a thin Antimony/SBML-based layer can provide the same workflow, BioIR should collapse into that layer rather than become another language.
 
 ## Existing controller research
 
-The earlier BioIR v0 synthetic controller is preserved.
-
-```text
-objective/state/constraint model
-              ↓
-SENSE / INCREASE / DECREASE / MAINTAIN / WAIT
-              ↓
-synthetic closed-loop runtime
-```
-
-The old CLI remains available:
+The historical BioIR v0 controller experiments are preserved, including the rejected temporal-fusion result. They are evidence, not the current definition of the project.
 
 ```bash
 python -m bioir compile examples/toy_homeostasis.json
 python -m bioir simulate examples/toy_homeostasis.json
 ```
 
-Those controller experiments are now treated as one downstream research path, not the definition of the entire abstraction.
+## Current falsifiable questions
 
-The rejected temporal-fusion result is also preserved. BioIR does not rewrite failed experiments because a newer architecture is more attractive.
+1. Which incomplete BioIR models are already representable directly in Antimony/SBML?
+2. Which diagnostics are genuinely missing from established tooling?
+3. Does a machine-readable unresolved-commitment receipt add useful information?
+4. Can partial models round-trip through established tooling without semantic loss?
+5. Can explicit completion profiles make models executable while preserving an auditable assumption trail?
+
+Until those tests are answered, BioIR has **no novelty claim** beyond being an experimental hypothesis.
 
 ## Safety boundary
 
 BioIR remains modeling/simulation-only. It does not generate wet-lab protocols, synthesis-ready biological sequences, pathogen optimization, patient-specific treatment instructions, or autonomous physical actuation.
-
-## Current research question
-
-The next falsifiable question is:
-
-> Can a typed, user-facing biological abstraction catch useful errors before simulation and lower reproducibly into established representations such as SBML without forcing the user to commit prematurely to one mathematical form?
-
-That is a much narrower claim than “a universal programming language for biology,” which is convenient because reality tends to punish slogans eventually.
 
 ## License
 
