@@ -131,6 +131,43 @@ The important invariant is that **BioIR does not silently convert missing biolog
 
 A future explicit compilation profile may resolve those commitments, but each added assumption must be recorded.
 
+
+## Human / AI readable views
+
+The canonical model remains structured data, but important semantics must not be
+hidden inside compiler internals.
+
+Render a deterministic plain-text view with:
+
+```bash
+python -m bioir show-model examples/underspecified_conversion.json
+```
+
+The output exposes compartments, entities, units, parameters, interactions,
+provenance, and unresolved mathematics in ordinary text.
+
+The same rule applies to completion receipts:
+
+```bash
+python -m bioir plan-completion examples/underspecified_conversion.json --format text
+```
+
+This produces a human/AI-readable audit such as:
+
+```text
+Still unresolved:
+- parameter_value:k1
+- kinetic_law:A_to_B
+
+Compiler assumptions introduced:
+- none
+```
+
+These renderings are **views of the canonical structured model and receipt**,
+not a second modeling language. The JSON remains the machine-stable source of
+truth; the text view exists so a person or AI system can inspect the same
+semantics without reverse-engineering internal objects.
+
 ## Structural SBML export
 
 ```bash
