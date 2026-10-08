@@ -43,7 +43,7 @@ CASES = [
     ("missing_parameter", ("interactions", 0, "parameter_refs", 0),
      "ghost", ("interaction.unknown_parameter",), ()),
     ("duplicate_symbol", ("entities", 1, "id"),
-     "A", ("id.duplicate",), ()),
+     "A", ("id.duplicate", "interaction.unknown_entity"), ()),
     ("invalid_stoichiometry", ("interactions", 0, "inputs", 0, "stoichiometry"),
      -1, ("interaction.stoichiometry",), ()),
     ("zero_volume", ("compartments", 0, "size"),
