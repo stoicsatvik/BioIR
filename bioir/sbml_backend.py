@@ -25,6 +25,7 @@ def _custom_unit_definition(
     parent: ET.Element,
     unit_id: str,
     signature: tuple[int, int, int],
+    semantic_unit: str,
 ) -> None:
     unit_def = ET.SubElement(parent, _tag("unitDefinition"), {"id": unit_id})
     units = ET.SubElement(unit_def, _tag("listOfUnits"))
@@ -34,7 +35,7 @@ def _custom_unit_definition(
             units,
             _tag("unit"),
             {
-                "kind": "item" if unit_id.startswith("item") else "mole",
+                "kind": "item" if semantic_unit.startswith("item") else "mole",
                 "exponent": str(substance),
                 "scale": "0",
                 "multiplier": "1",
@@ -127,7 +128,7 @@ def to_sbml_xml(model: SemanticModel) -> str:
     if custom_units:
         definitions = ET.SubElement(sbml_model, _tag("listOfUnitDefinitions"))
         for unit in custom_units:
-            _custom_unit_definition(definitions, custom_unit_ids[unit], UNIT_SIGNATURES[unit])
+            _custom_unit_definition(definitions, custom_unit_ids[unit], UNIT_SIGNATURES[unit], unit)
 
     compartments = ET.SubElement(sbml_model, _tag("listOfCompartments"))
     for compartment in sorted(model.compartments, key=lambda x: x.id):
