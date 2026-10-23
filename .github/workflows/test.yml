@@ -35,7 +35,7 @@ jobs:
       - name: Install package, tests and libSBML
         run: python -m pip install -e ".[test,sbml]"
       - name: Run semantic and completion contract tests
-        run: python -m pytest -q tests/test_semantic_model.py tests/test_completion.py tests/test_render.py
+        run: python -m pytest -q tests/test_semantic_model.py tests/test_completion.py tests/test_render.py tests/test_sbml_unit_identity.py
       - name: Check complete semantic model
         run: python -m bioir check-model examples/toy_semantic_model.json
       - name: Check under-specified semantic model
