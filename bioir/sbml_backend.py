@@ -34,7 +34,7 @@ def _custom_unit_definition(
             units,
             _tag("unit"),
             {
-                "kind": "mole",
+                "kind": "item" if unit_id.startswith("item") else "mole",
                 "exponent": str(substance),
                 "scale": "0",
                 "multiplier": "1",
