@@ -180,3 +180,11 @@ BioIR remains modeling/simulation-only.
 - No wet-lab procedural protocols.
 - No autonomous real-world biological actuation.
 - No patient-specific treatment or clinical decision system.
+
+## 2026-10-25: E229 nonfinite objective-tolerance false convergence
+
+**Pre-fix falsification:** BioIR v0 accepted an objective with `tolerance=Infinity` and `state.x=0, target.x=1`; the synthetic runtime could mark this maximally wrong state converged at step zero. NaN tolerance was also accepted, leading to non-convergent comparisons. A test-only PR commit `1c9fa2cfde46e860ddc70ccb815410ec2eb7d765` produced expected-red [CI 40121341687](https://github.com/stoicsatvik/BioIR/actions/runs/40121341687): 3 failed, 67 passed, 2 skipped.
+
+**Correction:** `validate_program` now requires finite, strictly positive objective tolerances; compiler and runtime inherit the same fail-closed validation. [Exact-head CI 40121419724](https://github.com/stoicsatvik/BioIR/actions/runs/40121419724) at `e53d35fd599263632da72b4ec703657ddbcbce30`: 70 passed, 2 skipped, semantic-model/SBML job passed.
+
+**Claim:** Numerical validation boundary SUPPORTED IN SOFTWARE TESTS. This is not evidence of biological controllability, SBML round-trip completeness, or unique value over Antimony. The central novelty hypothesis remains NOT YET PROVEN. **Next scientific move:** direct comparison of partial-model assumption receipts against Antimony/SBML on independently frozen model examples, not further generic compiler scaffolding.
