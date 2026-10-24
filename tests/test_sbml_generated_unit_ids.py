@@ -1,11 +1,11 @@
-"""Synthetic SBML namespace collision regression; no biological execution."""
+"""SBML UnitSId and SId namespace regression; no biological execution."""
 from xml.etree import ElementTree as ET
 
 from bioir.semantic_model import SemanticModel
 from bioir.sbml_backend import SBML_NS, to_sbml_xml
 
 
-def test_generated_unit_ids_do_not_alias_species_or_parameters():
+def test_unit_definitions_may_reuse_species_and_parameter_names():
     model = SemanticModel.from_dict(
         {
             "name": "synthetic_collision",
@@ -26,8 +26,12 @@ def test_generated_unit_ids_do_not_alias_species_or_parameters():
     xml = to_sbml_xml(model)
     root = ET.fromstring(xml)
     ns = {"s": SBML_NS}
-    ids = [element.attrib["id"] for element in root.iter() if "id" in element.attrib]
-    assert len(ids) == len(set(ids)), "SBML model-wide identifiers must not collide"
+    # UnitSId and SId are *separate* namespaces under SBML L3V2 Core.
+    units = [element.attrib["id"] for element in root.findall(".//s:unitDefinition", ns)]
+    sids = [element.attrib["id"] for element in root.iter()
+            if "id" in element.attrib and element.tag != f"{{{SBML_NS}}}unitDefinition"]
+    assert len(units) == len(set(units))
+    assert len(sids) == len(set(sids))
 
     definitions = {
         element.attrib["id"]: element
@@ -39,8 +43,8 @@ def test_generated_unit_ids_do_not_alias_species_or_parameters():
     }
     item_unit_id = parameters["p"].attrib["units"]
     mole_unit_id = parameters["mole_per_litre"].attrib["units"]
-    assert item_unit_id == "bioir_unit_item_per_litre_2"
-    assert mole_unit_id == "bioir_unit_mole_per_litre"
+    assert item_unit_id == "item_per_litre"
+    assert mole_unit_id == "mole_per_litre"
     assert definitions[item_unit_id].find("s:listOfUnits/s:unit", ns).attrib["kind"] == "item"
     assert definitions[mole_unit_id].find("s:listOfUnits/s:unit", ns).attrib["kind"] == "mole"
     assert to_sbml_xml(model) == xml

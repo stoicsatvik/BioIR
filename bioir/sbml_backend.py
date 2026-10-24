@@ -107,28 +107,14 @@ def to_sbml_xml(model: SemanticModel) -> str:
     parameter_units = {p.unit for p in model.parameters}
     custom_units = sorted(unit for unit in parameter_units if unit not in builtin)
 
-    # SBML UnitDefinition identifiers share the model-wide SId namespace with
-    # parameters, species, compartments, and reactions. A semantic parameter
-    # named "item_per_litre" must not collide with its generated unit definition.
-    occupied_ids = {model.name}
-    occupied_ids.update(x.id for x in model.compartments)
-    occupied_ids.update(x.id for x in model.entities)
-    occupied_ids.update(x.id for x in model.parameters)
-    occupied_ids.update(x.id for x in model.interactions)
-    custom_unit_ids: dict[str, str] = {}
-    for unit in custom_units:
-        candidate = unit if unit not in occupied_ids else f"bioir_unit_{unit}"
-        suffix = 2
-        while candidate in occupied_ids:
-            candidate = f"bioir_unit_{unit}_{suffix}"
-            suffix += 1
-        custom_unit_ids[unit] = candidate
-        occupied_ids.add(candidate)
-
+    # UnitDefinition IDs belong to UnitSId, separate from the SId namespace
+    # of Model, Species, Parameter, Compartment and Reaction (SBML L3V2 §3.3.1).
+    # Reusing a string across these two namespaces is legal; renaming a unit
+    # based on an unrelated model symbol was an overconservative E189 premise.
     if custom_units:
         definitions = ET.SubElement(sbml_model, _tag("listOfUnitDefinitions"))
         for unit in custom_units:
-            _custom_unit_definition(definitions, custom_unit_ids[unit], UNIT_SIGNATURES[unit], unit)
+            _custom_unit_definition(definitions, unit, UNIT_SIGNATURES[unit], unit)
 
     compartments = ET.SubElement(sbml_model, _tag("listOfCompartments"))
     for compartment in sorted(model.compartments, key=lambda x: x.id):
@@ -167,7 +153,7 @@ def to_sbml_xml(model: SemanticModel) -> str:
         for parameter in sorted(model.parameters, key=lambda x: x.id):
             attrs = {
                 "id": parameter.id,
-                "units": custom_unit_ids.get(parameter.unit, parameter.unit),
+                "units": parameter.unit,
                 "constant": "true" if parameter.constant else "false",
             }
             if parameter.value is not None:

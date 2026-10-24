@@ -93,7 +93,9 @@ def check_semantic_model(model: SemanticModel) -> ModelCheckReport:
             "model name must be portable to SBML SId syntax",
         )
 
-    symbol_paths: dict[str, str] = {}
+    # Model.id shares the SId namespace with compartments, species, parameters
+    # and reactions (SBML L3V2 Core §3.3.1). UnitDefinition IDs do not.
+    symbol_paths: dict[str, str] = {model.name: "name"}
 
     def register(symbol: str, path: str) -> None:
         if not SID_RE.fullmatch(symbol):
