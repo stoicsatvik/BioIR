@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from math import isfinite
+
 from .model import Program
 
 
@@ -30,8 +32,8 @@ def validate_program(program: Program) -> None:
                 f"duplicate objective for variable: {objective.variable}"
             )
         seen.add(objective.variable)
-        if objective.tolerance <= 0:
-            raise ValidationError("objective tolerance must be positive")
+        if not isfinite(objective.tolerance) or objective.tolerance <= 0:
+            raise ValidationError("objective tolerance must be finite and positive")
         if not 0.0 <= objective.target <= 1.0:
             raise ValidationError("v0 targets must use normalized [0, 1] values")
 
