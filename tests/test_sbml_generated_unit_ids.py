@@ -1,11 +1,11 @@
-"""Synthetic SBML namespace collision regression; no biological execution."""
+"""SBML UnitSId and SId namespace regression; no biological execution."""
 from xml.etree import ElementTree as ET
 
 from bioir.semantic_model import SemanticModel
 from bioir.sbml_backend import SBML_NS, to_sbml_xml
 
 
-def test_generated_unit_ids_do_not_alias_species_or_parameters():
+def test_unit_definitions_may_reuse_species_and_parameter_names():
     model = SemanticModel.from_dict(
         {
             "name": "synthetic_collision",
