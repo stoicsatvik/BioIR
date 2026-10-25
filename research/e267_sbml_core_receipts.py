@@ -9,10 +9,11 @@ from __future__ import annotations
 from copy import deepcopy
 import json
 from pathlib import Path
+from xml.etree import ElementTree as ET
 
 from bioir.completion import plan_executable_completion
 from bioir.semantic_model import SemanticModel
-from bioir.sbml_backend import to_sbml_xml
+from bioir.sbml_backend import BIOIR_NS, to_sbml_xml
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -76,8 +77,14 @@ def run() -> dict:
         reconstructed = core_keys(reread.getModel())
         if expected != original or expected != reconstructed:
             raise AssertionError(f"{name}: unresolved-key reconstruction mismatch")
-        if "bioir:" in stripped_xml or "stoicsatvik.github.io/BioIR" in stripped_xml:
-            raise AssertionError(f"{name}: BioIR extension not actually stripped")
+        # libSBML may retain an unused xmlns:bioir declaration on the root.
+        # Test actual extension elements/attributes, not harmless namespace text.
+        root = ET.fromstring(stripped_xml)
+        ns_prefix = "{" + BIOIR_NS + "}"
+        if any(node.tag.startswith(ns_prefix) or any(
+                attr.startswith(ns_prefix) for attr in node.attrib)
+               for node in root.iter()):
+            raise AssertionError(f"{name}: BioIR extension elements not stripped")
         rows.append({
             "case": name,
             "expected_receipt_keys": sorted(expected),
