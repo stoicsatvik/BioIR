@@ -188,3 +188,11 @@ BioIR remains modeling/simulation-only.
 **Correction:** `validate_program` now requires finite, strictly positive objective tolerances; compiler and runtime inherit the same fail-closed validation. [Exact-head CI 40121419724](https://github.com/stoicsatvik/BioIR/actions/runs/40121419724) at `e53d35fd599263632da72b4ec703657ddbcbce30`: 70 passed, 2 skipped, semantic-model/SBML job passed.
 
 **Claim:** Numerical validation boundary SUPPORTED IN SOFTWARE TESTS. This is not evidence of biological controllability, SBML round-trip completeness, or unique value over Antimony. The central novelty hypothesis remains NOT YET PROVEN. **Next scientific move:** direct comparison of partial-model assumption receipts against Antimony/SBML on independently frozen model examples, not further generic compiler scaffolding.
+
+## 2026-10-25: E267 SBML Core unresolved-key reconstruction
+
+Six frozen safe synthetic structural models were exported to SBML Level 3 Core, parsed by libSBML, stripped of BioIR-specific annotation elements/attributes, serialized, and reparsed. All six BioIR `parameter_value:<id>` and `kinetic_law:<id>` unresolved-key sets were reconstructed exactly using only standard SBML presence bits. [Exact-head CI 40212759770](https://github.com/stoicsatvik/BioIR/actions/runs/40212759770) passed both jobs; immutable JSON artifact 12605943062. Details: `research/E267_SBML_CORE_RECEIPT_FALSIFICATION.md`.
+
+**Claim update:** Enumeration of missing parameter-value and kinetic-law keys is **not unique** to BioIR for the tested corpus. This is evidence *against* the standalone-language novelty thesis, not proof of full equivalence to Antimony/SBML or the broader assumption-audit workflow. The central BioIR novelty remains **NOT YET PROVEN**.
+
+**Highest-EV next:** Head-to-head standards-based thin receipt vs BioIR on explicit assumption introduction, parameter/reaction intent, provenance, and semantic round-trip loss. If no differential value survives, collapse BioIR into an established SBML/Antimony tooling layer. No biological wet-lab or clinical action.
