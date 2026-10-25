@@ -78,6 +78,30 @@ def _issue(
     issues.append(ModelIssue(severity, code, path, message))
 
 
+def _xml10_character_allowed(char: str) -> bool:
+    """XML 1.0 Fifth Edition Char production, not an XML parser substitute."""
+    cp = ord(char)
+    return (
+        cp in (0x9, 0xA, 0xD)
+        or 0x20 <= cp <= 0xD7FF
+        or 0xE000 <= cp <= 0xFFFD
+        or 0x10000 <= cp <= 0x10FFFF
+    )
+
+
+def _check_xml_text(
+    issues: list[ModelIssue], path: str, value: str | None
+) -> None:
+    if value is not None and not all(_xml10_character_allowed(c) for c in value):
+        _issue(
+            issues,
+            "error",
+            "text.invalid_xml_char",
+            path,
+            "text contains characters prohibited by XML 1.0",
+        )
+
+
 def check_semantic_model(model: SemanticModel) -> ModelCheckReport:
     issues: list[ModelIssue] = []
 
@@ -128,6 +152,7 @@ def check_semantic_model(model: SemanticModel) -> ModelCheckReport:
     for index, compartment in enumerate(model.compartments):
         path = f"compartments[{index}]"
         register(compartment.id, f"{path}.id")
+        _check_xml_text(issues, f"{path}.name", compartment.name)
         signature = UNIT_SIGNATURES.get(compartment.unit)
         if signature is None:
             _issue(
@@ -173,6 +198,7 @@ def check_semantic_model(model: SemanticModel) -> ModelCheckReport:
     for index, entity in enumerate(model.entities):
         path = f"entities[{index}]"
         register(entity.id, f"{path}.id")
+        _check_xml_text(issues, f"{path}.name", entity.name)
         if entity.compartment not in compartments:
             _issue(
                 issues,
@@ -212,6 +238,7 @@ def check_semantic_model(model: SemanticModel) -> ModelCheckReport:
     for index, parameter in enumerate(model.parameters):
         path = f"parameters[{index}]"
         register(parameter.id, f"{path}.id")
+        _check_xml_text(issues, f"{path}.name", parameter.name)
         if parameter.unit not in UNIT_SIGNATURES:
             _issue(
                 issues,
@@ -245,6 +272,7 @@ def check_semantic_model(model: SemanticModel) -> ModelCheckReport:
     for index, interaction in enumerate(model.interactions):
         path = f"interactions[{index}]"
         register(interaction.id, f"{path}.id")
+        _check_xml_text(issues, f"{path}.name", interaction.name)
         participants = list(interaction.inputs) + list(interaction.outputs)
         if not participants and not interaction.modifiers:
             _issue(
@@ -292,6 +320,13 @@ def check_semantic_model(model: SemanticModel) -> ModelCheckReport:
                     f"{path}.parameter_refs",
                     f"unknown parameter: {parameter}",
                 )
+
+    for field_name in ("source", "citation", "notes"):
+        _check_xml_text(
+            issues,
+            f"provenance.{field_name}",
+            getattr(model.provenance, field_name),
+        )
 
     if model.provenance.source is None and model.provenance.citation is None:
         _issue(
