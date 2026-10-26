@@ -107,3 +107,21 @@ jobs:
         with:
           name: e284-sbml-sidecar
           path: research/results/e284_sbml_sidecar.json
+
+      - name: E303 independently specified assumption-sidecar falsification
+        run: |
+          python -m pytest -q tests/test_e303_sbml_assumption_sidecar.py
+          python -m research.e303_sbml_assumption_sidecar > research/results/e303_sbml_assumption_sidecar.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path("research/results/e303_sbml_assumption_sidecar.json").read_text())
+          assert result["libsbml_reparse"] == "2/2", result
+          assert result["origin_spoof_accepted"], "preserve negative provenance control"
+          print("E303: two completed SBML models reparsed; origin spoof remains undetectable")
+          PY
+      - name: Upload E303 assumption-sidecar falsification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: e303-sbml-assumption-sidecar
+          path: research/results/e303_sbml_assumption_sidecar.json
