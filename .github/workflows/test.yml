@@ -97,3 +97,13 @@ jobs:
         with:
           name: e267-sbml-core-receipts
           path: research/results/e267_sbml_core_receipts.json
+
+      - name: E284 SBML Core versus thin-sidecar falsification
+        run: |
+          python -m pytest -q tests/test_e284_sbml_sidecar.py
+          python -m research.e284_sbml_sidecar
+      - name: Upload E284 Core/sidecar evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: e284-sbml-sidecar
+          path: research/results/e284_sbml_sidecar.json

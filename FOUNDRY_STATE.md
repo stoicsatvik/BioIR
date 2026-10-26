@@ -196,3 +196,26 @@ Six frozen safe synthetic structural models were exported to SBML Level 3 Core, 
 **Claim update:** Enumeration of missing parameter-value and kinetic-law keys is **not unique** to BioIR for the tested corpus. This is evidence *against* the standalone-language novelty thesis, not proof of full equivalence to Antimony/SBML or the broader assumption-audit workflow. The central BioIR novelty remains **NOT YET PROVEN**.
 
 **Highest-EV next:** Head-to-head standards-based thin receipt vs BioIR on explicit assumption introduction, parameter/reaction intent, provenance, and semantic round-trip loss. If no differential value survives, collapse BioIR into an established SBML/Antimony tooling layer. No biological wet-lab or clinical action.
+
+## 2026-10-26: E284 SBML Core plus thin-sidecar novelty falsification
+
+On six safe synthetic structural models, annotation-free SBML Core plus a small
+source-derived metadata sidecar reconstructed **6/6 current unresolved receipts**
+(excluding policy prose). Four of six one-field variants (provenance source/notes,
+interaction kind/parameter references) were **indistinguishable in Core alone**
+but distinguishable by the sidecar; two standard-Core controls changed Core.
+An accidental Core/sidecar mismatch was detected by a pairing digest. Exact-head
+initial CI run 40270102419 SUCCESS, two jobs; immutable artifact 12627808897.
+See `research/E284_SBML_SIDECAR_NOVELTY_FALSIFICATION.md` and draft PR #18.
+
+**Claim:** Core-only semantic-intent loss and current thin-sidecar representability
+SUPPORTED IN SYNTHETIC TESTS. Standalone BioIR novelty **NOT YET PROVEN**;
+this is further negative evidence against inventing a new language.
+**Crucial limitation:** the sidecar is generated from BioIR source and carries
+its fingerprint; every introduced-assumption list is empty. No completion
+profiles, real biological models, independent Antimony round trip, or verified
+assumption-audit advantage were tested.
+
+**Next:** one frozen hypothetical completion-profile assumption-audit comparison
+against SBML/Antimony + a thin independent provenance layer; collapse to
+standards-based tooling if the latter is equivalent. Remain simulation-only.
