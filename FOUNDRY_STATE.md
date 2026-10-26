@@ -219,3 +219,12 @@ assumption-audit advantage were tested.
 **Next:** one frozen hypothetical completion-profile assumption-audit comparison
 against SBML/Antimony + a thin independent provenance layer; collapse to
 standards-based tooling if the latter is equivalent. Remain simulation-only.
+
+
+## 2026-10-26: E303 explicit-assumption standards-based falsification
+
+E284's zero-assumption result was extended with two independently specified, **hypothetical** parameter/kinetic-law completion profiles (k1=0.1 and 0.2; MathML k1*A*cell). Annotation-free SBML Core plus a thin receipt sidecar represented both, matched BioIR's two unresolved commitment keys, and rejected swapped Core/sidecar, altered parameter values, and altered kinetic MathML. The deliberately spoofed hypothetical origin label **was accepted**: content hashes do not authenticate provenance. All examples are synthetic, with no measured biological kinetics.
+
+E303 [draft PR #19](https://github.com/stoicsatvik/BioIR/pull/19), stacked on E284 #18. [Exact-head Actions 40342916806](https://github.com/stoicsatvik/BioIR/actions/runs/40342916806) SUCCESS at 73df1de19e295d38e5b3bc03cd9cfe853ad8a844: 4 focused tests, 2/2 libSBML reparses, unit suite 83 passed / 4 skipped; [artifact 12659922223](https://github.com/stoicsatvik/BioIR/actions/runs/40342916806/artifacts/12659922223).
+
+**Claim:** Thin-sidecar introduced-assumption *representability and content checking* SUPPORTED FOR TWO SYNTHETIC PROFILES. Independently authenticated assumption provenance NOT YET PROVEN. Standalone BioIR language novelty NOT YET PROVEN. No Antimony parity or scientific validity demonstrated. **Next:** independently authored real-model SBML/Antimony comparison with externally verifiable assumption provenance; collapse into standards tooling if no distinct capability survives.
