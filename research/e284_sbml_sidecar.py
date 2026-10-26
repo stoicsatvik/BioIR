@@ -64,7 +64,7 @@ def reconstruct_current_receipt(sbml_model, sidecar: dict) -> dict:
     No completion profiles or introduced assumptions exist in the current IR.
     """
     commitments = []
-    for key in sorted(core_keys(sbml_model)):
+    for key in sorted(core_keys(sbml_model), key=lambda k: (0 if k.startswith("parameter_value:") else 1, k)):
         category, identifier = key.split(":", 1)
         if category == "parameter_value":
             path = f"parameters.{identifier}.value"
