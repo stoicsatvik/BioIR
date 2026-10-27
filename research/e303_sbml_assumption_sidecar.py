@@ -105,6 +105,32 @@ def complete_with_explicit_profile(
     return completed, receipt
 
 
+def _only_declared_assumptions_changed(baseline_xml: str, completed_xml: str) -> bool:
+    """Prove the completed Core differs only at the two declared commitments.
+
+    A matching digest alone is insufficient: an author can hash an altered
+    species, compartment or reaction and leave the sidecar's assumption list
+    unchanged. Revert exactly the declared edits, then compare canonical XML.
+    """
+    baseline = ET.fromstring(baseline_xml)
+    completed = ET.fromstring(completed_xml)
+    source_parameter = _find_single(baseline, "parameter", "k1")
+    source_reaction = _find_single(baseline, "reaction", "A_to_B")
+    if "value" in source_parameter.attrib:
+        return False
+    if source_reaction.find(f"{{{SBML}}}kineticLaw") is not None:
+        return False
+
+    parameter = _find_single(completed, "parameter", "k1")
+    reaction = _find_single(completed, "reaction", "A_to_B")
+    law = reaction.find(f"{{{SBML}}}kineticLaw")
+    if law is None:
+        return False
+    parameter.attrib.pop("value", None)
+    reaction.remove(law)
+    return ET.canonicalize(_render(completed)) == ET.canonicalize(_render(baseline))
+
+
 def verify_receipt(baseline_xml: str, completed_xml: str, receipt: dict) -> bool:
     """Verify claimed SBML content; cannot verify who supplied an assumption."""
     try:
@@ -126,6 +152,8 @@ def verify_receipt(baseline_xml: str, completed_xml: str, receipt: dict) -> bool
         reaction = _find_single(root, "reaction", "A_to_B")
         law = reaction.find(f"{{{SBML}}}kineticLaw")
         if law is None or len(law) != 1:
+            return False
+        if not _only_declared_assumptions_changed(baseline_xml, completed_xml):
             return False
         return (
             parameter.get("value") == assumptions[0]["value"]
