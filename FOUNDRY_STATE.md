@@ -228,3 +228,21 @@ E284's zero-assumption result was extended with two independently specified, **h
 E303 [draft PR #19](https://github.com/stoicsatvik/BioIR/pull/19), stacked on E284 #18. [Exact-head Actions 40342916806](https://github.com/stoicsatvik/BioIR/actions/runs/40342916806) SUCCESS at 73df1de19e295d38e5b3bc03cd9cfe853ad8a844: 4 focused tests, 2/2 libSBML reparses, unit suite 83 passed / 4 skipped; [artifact 12659922223](https://github.com/stoicsatvik/BioIR/actions/runs/40342916806/artifacts/12659922223).
 
 **Claim:** Thin-sidecar introduced-assumption *representability and content checking* SUPPORTED FOR TWO SYNTHETIC PROFILES. Independently authenticated assumption provenance NOT YET PROVEN. Standalone BioIR language novelty NOT YET PROVEN. No Antimony parity or scientific validity demonstrated. **Next:** independently authored real-model SBML/Antimony comparison with externally verifiable assumption provenance; collapse into standards tooling if no distinct capability survives.
+
+
+## 2026-10-28 E354: layout-only SBML receipt false rejection
+
+An ordinary XML pretty-print of the E303 synthetic completed SBML Core, with
+a correctly recomputed receipt digest and no changed assumptions, was
+incorrectly rejected by the E338 verifier. Test-first CI
+[40638397736](https://github.com/stoicsatvik/BioIR/actions/runs/40638397736)
+failed at the reindentation control. Narrow element-only SBML/MathML
+whitespace normalization fixed the false rejection while retaining
+undeclared species and MathML mutation rejection. Exact-head CI
+[40638435163](https://github.com/stoicsatvik/BioIR/actions/runs/40638435163)
+passed; see `research/E354_SBML_LAYOUT_EQUIVALENCE_20261028.md` and
+draft PR #21. **Claim:** narrow XML layout tolerance SUPPORTED IN TESTED
+SOFTWARE; independent standards round-trip equivalence, provenance
+authenticity, biological validity and standalone BioIR novelty NOT YET PROVEN.
+Next: independent libSBML/Antimony round-trip and mixed-content adversarial
+tests, with standards integration preferred over duplicating prior art.

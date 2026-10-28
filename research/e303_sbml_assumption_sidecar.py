@@ -105,6 +105,29 @@ def complete_with_explicit_profile(
     return completed, receipt
 
 
+def _canonical_layout_xml(xml: str) -> str:
+    """Ignore XML indentation in element-only SBML/MathML structures.
+
+    Do not strip non-whitespace text, MathML identifier contents, or
+    notes/annotation mixed content. This is a deliberately narrow layout
+    normalization, not an assertion of general SBML semantic equivalence.
+    """
+    root = ET.fromstring(xml)
+    for parent in root.iter():
+        sbml_structure = (
+            parent.tag.startswith(f"{{{SBML}}}")
+            and parent.tag not in {f"{{{SBML}}}notes", f"{{{SBML}}}annotation"}
+        )
+        math_structure = parent.tag in {f"{{{MATH}}}math", f"{{{MATH}}}apply"}
+        if sbml_structure or math_structure:
+            if parent.text is not None and not parent.text.strip():
+                parent.text = None
+            for child in parent:
+                if child.tail is not None and not child.tail.strip():
+                    child.tail = None
+    return ET.canonicalize(_render(root))
+
+
 def _only_declared_assumptions_changed(baseline_xml: str, completed_xml: str) -> bool:
     """Prove the completed Core differs only at the two declared commitments.
 
@@ -128,7 +151,7 @@ def _only_declared_assumptions_changed(baseline_xml: str, completed_xml: str) ->
         return False
     parameter.attrib.pop("value", None)
     reaction.remove(law)
-    return ET.canonicalize(_render(completed)) == ET.canonicalize(_render(baseline))
+    return _canonical_layout_xml(_render(completed)) == _canonical_layout_xml(_render(baseline))
 
 
 def verify_receipt(baseline_xml: str, completed_xml: str, receipt: dict) -> bool:
@@ -157,7 +180,7 @@ def verify_receipt(baseline_xml: str, completed_xml: str, receipt: dict) -> bool
             return False
         return (
             parameter.get("value") == assumptions[0]["value"]
-            and _render(law[0]) == assumptions[1]["mathml"]
+            and _canonical_layout_xml(_render(law[0])) == _canonical_layout_xml(assumptions[1]["mathml"])
             and all(a["origin"] in {
                 "hypothetical_user_choice", "hypothetical_profile_choice"
             } for a in assumptions)
