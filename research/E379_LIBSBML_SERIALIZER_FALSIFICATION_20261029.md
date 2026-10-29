@@ -1,21 +1,29 @@
-# E379 | Independent libSBML serializer versus explicit-assumption receipts
+# E379 | Independent libSBML serialization falsifies receipt portability
 
-**29 October 2026.** BioIR's E303/E354 synthetic SBML Core + thin-sidecar receipt verifier is tested against a *real independent SBML serializer*, rather than a same-library XML pretty-printer.
+**29 October 2026.** Two hypothetical mathematical completion profiles (k1=0.1 and 0.2) were generated from the frozen under-specified SBML Core example. No biological measurements or wet-lab operations were involved.
 
-## Predeclared test
+## Frozen discriminator
 
-Two hypothetical mathematical completion profiles (k1=0.1, 0.2) are generated from the frozen under-specified structural model. For each:
+1. Verify the original two-assumption SBML Core + sidecar receipt.
+2. Independently read/write the completed Core using **libSBML 5.21.2**, rehash the receipt and check against the original baseline.
+3. Independently read/write both baseline and completed Core, rehash both and verify again.
+4. Mutate an undeclared species initial concentration in the reserialized completed Core, rehash and require rejection.
 
-1. Verify the original two-assumption receipt.
-2. Round-trip completed SBML through the installed libSBML parser and serializer.
-3. Rehash the receipt and test whether the completed-only round trip is accepted against the unchanged baseline.
-4. Independently round-trip the baseline, rehash both, and test receipt acceptance.
-5. Change a species initial concentration in the reserialized completed Core, rehash again, and require rejection.
+## Measured result
 
-The last step tests a genuine undeclared content mutation, not digest mismatch. A false rejection after pure serialization is useful negative evidence about portability; acceptance would only support this narrow example.
+| Profile | Independent completed reparse | Completed-only receipt accepted | Both-rewritten receipt accepted | Undeclared species mutation rejected |
+|---|---|---|---|---|
+| k1=0.1 | Yes | **No** | **No** | Yes |
+| k1=0.2 | Yes | **No** | **No** | Yes |
 
-## Evidence status
+Both libSBML outputs reparsed, but the E303/E354 receipt verifier rejected **4/4** legitimate reserialized cases even after correctly recomputing SHA-256 digests. This is a reproducible **portability false rejection** under an independent serializer, not proof of altered biological semantics. The two deliberate species mutations were still rejected.
 
-**PENDING exact-head CI and real libSBML receipt.** Do not report a success rate until the independent serializer experiment actually runs.
+**Claim:** Independent libSBML serializer compatibility is REJECTED FOR THESE TWO SYNTHETIC PROFILES. The verifier is fail-closed on the tested mutation but is overstrict under standards serialization. No biological correctness, authenticated origin or general semantic equivalence has been demonstrated.
 
-The work is simulation-only. No biological optimization, wet-lab instructions, harmful sequence design, or clinical decisions. The standalone BioIR novelty thesis remains **NOT YET PROVEN**; standards-based integration is preferred if it provides equivalent capability.
+## Evidence
+
+- [Exact-head Actions #40801216458 SUCCESS](https://github.com/stoicsatvik/BioIR/actions/runs/40801216458), both unit and semantic-model jobs, plus one explicit E379 dependency-backed test.
+- [E379 numerical receipt #12866251550](https://github.com/stoicsatvik/BioIR/actions/runs/40801216458/artifacts/12866251550), independently downloaded, parsed and SHA-256 verified: `08cf1bcd455a6f54267598cc5d00358e9592e936fd16eb1da56b75805d3a71c6`.
+- Source code: `research/e379_libsbml_serializer.py`. Synthetic-only, with no autonomous biological actuation.
+
+**Next discriminating experiment:** Compare structural canonical forms before/after libSBML and isolate the exact formatting/default-attribute/MathML change responsible. Only relax a verifier rule when it can be proved semantically irrelevant and an undeclared-mutation adversarial control still rejects. Compare against a standards-based thin-sidecar alternative before claiming a distinct BioIR language is necessary.
