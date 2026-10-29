@@ -125,3 +125,23 @@ jobs:
         with:
           name: e303-sbml-assumption-sidecar
           path: research/results/e303_sbml_assumption_sidecar.json
+
+      - name: E379 independent libSBML serializer receipt falsification
+        run: |
+          python -m pytest -q tests/test_e379_libsbml_serializer.py
+          python -m research.e379_libsbml_serializer > /tmp/e379.json
+          python - <<'PY'
+          import json
+          result = json.load(open("/tmp/e379.json"))
+          assert result["profiles"] == 2
+          assert all(row["libsbml_completed_reparsed"] and row["undeclared_species_change_rejected"] for row in result["rows"])
+          print("E379 measured:", [(r["k1"], r["completed_only_receipt_accepted"], r["both_reserialized_receipt_accepted"]) for r in result["rows"]])
+          PY
+      - name: Preserve E379 independent serializer numerical receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e379-libsbml-serializer-falsification
+          path: /tmp/e379.json
+          if-no-files-found: ignore
+          retention-days: 30
