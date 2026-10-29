@@ -1,0 +1,39 @@
+name: E381 independent SBML serializer recovery
+on:
+  push:
+    branches:
+      - research/e381-libsbml-token-and-double-normalization-20261029
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  serializer-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e ".[test,sbml]"
+      - name: Existing E303 E354 E379 and E380 E381 controls
+        run: python -m pytest -q tests/test_e303_sbml_assumption_sidecar.py tests/test_e354_sbml_layout_equivalence.py tests/test_e379_libsbml_serializer.py tests/test_e380_libsbml_verifier_gates.py tests/test_e381_libsbml_roundtrip_recovery.py
+      - name: Full synthetic regression suite
+        run: python -m pytest -q
+      - name: Measure independent serializer recovery and preserve controls
+        run: |
+          python -m research.e379_libsbml_serializer > e381_receipt.json
+          python - <<'PY'
+          import json
+          r=json.load(open("e381_receipt.json"))
+          assert r["profiles"] == 2
+          assert all(row["completed_only_receipt_accepted"] and row["both_reserialized_receipt_accepted"] and row["undeclared_species_change_rejected"] for row in r["rows"])
+          print("E381",[(row["k1"],row["completed_only_receipt_accepted"],row["both_reserialized_receipt_accepted"],row["undeclared_species_change_rejected"]) for row in r["rows"]])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e381-libsbml-recovery-receipt
+          path: e381_receipt.json
+          if-no-files-found: ignore
+          retention-days: 30

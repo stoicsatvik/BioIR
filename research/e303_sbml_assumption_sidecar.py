@@ -9,6 +9,8 @@ from __future__ import annotations
 from copy import deepcopy
 from hashlib import sha256
 import json
+import re
+import struct
 from math import isfinite
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -128,6 +130,39 @@ def _canonical_layout_xml(xml: str) -> str:
     return ET.canonicalize(_render(root))
 
 
+
+def _same_sbml_binary64(actual: str | None, declared: str | None) -> bool:
+    """Accept lexical changes only when finite IEEE-754 double bits are identical.
+
+    This is an SBML double-value check, not a general decimal equivalence rule.
+    Preserve signed zero and reject NaN, infinity, invalid or padded strings.
+    """
+    decimal = r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
+    if not isinstance(actual, str) or not isinstance(declared, str):
+        return False
+    if not re.fullmatch(decimal, actual) or not re.fullmatch(decimal, declared):
+        return False
+    try:
+        left, right = float(actual), float(declared)
+        return (isfinite(left) and isfinite(right)
+                and struct.pack("!d", left) == struct.pack("!d", right))
+    except (ValueError, OverflowError):
+        return False
+
+
+def _canonical_mathml_token_xml(xml: str) -> str:
+    """Ignore outer whitespace only in MathML identifier/number tokens.
+
+    Do not alter identifier spelling, internal whitespace, XML attributes,
+    numeric values, or the surrounding SBML structure.
+    """
+    root = ET.fromstring(xml)
+    for node in root.iter():
+        if node.tag in {f"{{{MATH}}}ci", f"{{{MATH}}}cn"} and node.text is not None:
+            node.text = node.text.strip()
+    return _canonical_layout_xml(_render(root))
+
+
 def _only_declared_assumptions_changed(baseline_xml: str, completed_xml: str) -> bool:
     """Prove the completed Core differs only at the two declared commitments.
 
@@ -179,8 +214,8 @@ def verify_receipt(baseline_xml: str, completed_xml: str, receipt: dict) -> bool
         if not _only_declared_assumptions_changed(baseline_xml, completed_xml):
             return False
         return (
-            parameter.get("value") == assumptions[0]["value"]
-            and _canonical_layout_xml(_render(law[0])) == _canonical_layout_xml(assumptions[1]["mathml"])
+            _same_sbml_binary64(parameter.get("value"), assumptions[0]["value"])
+            and _canonical_mathml_token_xml(_render(law[0])) == _canonical_mathml_token_xml(assumptions[1]["mathml"])
             and all(a["origin"] in {
                 "hypothetical_user_choice", "hypothetical_profile_choice"
             } for a in assumptions)
