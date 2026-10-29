@@ -137,7 +137,7 @@ def _same_sbml_binary64(actual: str | None, declared: str | None) -> bool:
     This is an SBML double-value check, not a general decimal equivalence rule.
     Preserve signed zero and reject NaN, infinity, invalid or padded strings.
     """
-    decimal = r"[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
+    decimal = r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?"
     if not isinstance(actual, str) or not isinstance(declared, str):
         return False
     if not re.fullmatch(decimal, actual) or not re.fullmatch(decimal, declared):
