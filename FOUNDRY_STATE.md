@@ -246,3 +246,25 @@ SOFTWARE; independent standards round-trip equivalence, provenance
 authenticity, biological validity and standalone BioIR novelty NOT YET PROVEN.
 Next: independent libSBML/Antimony round-trip and mixed-content adversarial
 tests, with standards integration preferred over duplicating prior art.
+
+
+## 2026-10-30 E401: content receipt does not certify SBML semantics
+
+On the frozen synthetic under-specified conversion fixture, a hypothetical completed
+kinetic law with an undefined MathML identifier was accepted by the unchanged
+E303/E381 content receipt after the declared MathML and XML digest were both
+updated. Independent libSBML 5.21.2 `checkConsistency` flagged that exact
+undefined symbol. This is a measured **content-versus-semantics contract gap**,
+not an undocumented regression: `verify_receipt` checks hash-bound declared
+changes, not complete SBML semantics. Treating it as an executable-model
+certificate would be unjustified.
+
+[E401 exact-code Actions #40958356283](https://github.com/stoicsatvik/BioIR/actions/runs/40958356283)
+SUCCESS at `b548995e65adc0e6fbd1bf44d756e7d9b7e164c8`:
+2/2 focused tests and 11/11 inherited E303/E338/E381 controls.
+Report: `research/E401_SBML_UNDEFINED_SYMBOL_NEGATIVE_CONTROL_20261030.md`.
+Draft PR #25 stacked on E381 #24. **Claim:** content/semantic boundary
+SUPPORTED IN SYNTHETIC SOFTWARE TESTS; standalone BioIR novelty, authenticated
+provenance, general SBML/Antimony equivalence and biological validity
+**NOT YET PROVEN**. Next: independently authored standards-model corpus,
+with separate content, semantic and origin validation baselines.
