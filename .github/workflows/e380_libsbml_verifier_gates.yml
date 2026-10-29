@@ -1,0 +1,43 @@
+name: E380 independent SBML serializer gate isolation
+on:
+  push:
+    branches:
+      - research/e380-libsbml-verifier-gate-isolation-20261029
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verifier-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e ".[test,sbml]"
+      - name: Frozen original and tamper controls
+        run: python -m pytest -q tests/test_e380_libsbml_verifier_gates.py tests/test_e379_libsbml_serializer.py tests/test_e303_sbml_assumption_sidecar.py
+      - name: Localize real independent serializer failure
+        run: |
+          python -m research.e380_libsbml_verifier_gates > e380_receipt.json
+          python - <<'PY'
+          import json
+          r=json.load(open("e380_receipt.json"))
+          assert len(r["rows"]) == 2
+          for row in r["rows"]:
+              assert all(row["gates"]["original"].values())
+              assert row["gates"]["completed_only"]["baseline_hash"]
+              assert row["gates"]["completed_only"]["completed_hash"]
+              assert not row["gates"]["completed_only"]["receipt_accepted"]
+              assert not row["gates"]["both_roundtripped"]["receipt_accepted"]
+              print("E380",row["k1"],{k:[n for n,v in g.items() if not v] for k,g in row["gates"].items()})
+          PY
+      - name: Preserve exact diagnostic receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e380-libsbml-verifier-gate-isolation
+          path: e380_receipt.json
+          if-no-files-found: ignore
+          retention-days: 30
