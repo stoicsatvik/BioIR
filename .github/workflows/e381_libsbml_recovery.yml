@@ -18,6 +18,8 @@ jobs:
       - run: python -m pip install -e ".[test,sbml]"
       - name: Existing E303 E354 E379 and E380 E381 controls
         run: python -m pytest -q tests/test_e303_sbml_assumption_sidecar.py tests/test_e354_sbml_layout_equivalence.py tests/test_e379_libsbml_serializer.py tests/test_e380_libsbml_verifier_gates.py tests/test_e381_libsbml_roundtrip_recovery.py
+      - name: Full synthetic regression suite
+        run: python -m pytest -q
       - name: Measure independent serializer recovery and preserve controls
         run: |
           python -m research.e379_libsbml_serializer > e381_receipt.json
