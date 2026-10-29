@@ -1,0 +1,22 @@
+name: E401 SBML semantic identifier negative control
+on:
+  push:
+    branches:
+      - research/e401-sbml-symbol-resolution-negative-control-20261030
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  semantic-negative-control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e ".[test,sbml]"
+      - name: Independent libSBML semantic negative control
+        run: python -m pytest -q -rs tests/test_e401_semantic_symbol_gap.py
+      - name: Inherited content receipt regression
+        run: python -m pytest -q tests/test_e303_sbml_assumption_sidecar.py tests/test_e338_sbml_receipt_diff_integrity.py tests/test_e381_libsbml_roundtrip_recovery.py
