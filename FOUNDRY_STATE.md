@@ -268,3 +268,10 @@ SUPPORTED IN SYNTHETIC SOFTWARE TESTS; standalone BioIR novelty, authenticated
 provenance, general SBML/Antimony equivalence and biological validity
 **NOT YET PROVEN**. Next: independently authored standards-model corpus,
 with separate content, semantic and origin validation baselines.
+
+
+## 2026-10-30 E423: independently authored SBML stoichiometric baseline
+
+Official SBML Test Suite commit `d6dcd2cc6408d5eb881638ac6ce7a05fd7d2e4d1`, semantic cases 00001–00003, provided three unchanged Level 3 Version 2 models and 153 published reference timepoints. For cases 00001 and 00002 (one product per reactant), naive S1+S2 is conserved to floating-point precision. In case 00003 (two products per reactant), naive S1+S2 changes by 99.3262053% of initial S1 by t=5, while S1+S2/2 remains conserved within 3.47e-18 absolute error. The conventional analytical trajectory agrees within 6.94e-18 absolute error. Six isolated offline Python tests passed locally; full exact committed-source CI was not executed. See `research/E423_INDEPENDENT_SBML_STOICHIOMETRY_20261030.md`.
+
+**Claim:** naive species-sum conservation as a general SBML semantic invariant REJECTED FOR THESE PUBLISHED MODELS; stoichiometric invariant and analytic baseline SUPPORTED ON THIS FROZEN FAMILY. These are published simulation reference trajectories, not biological measurements. BioIR standalone novelty, broad standards equivalence and biological validity NOT YET PROVEN. Next: larger independent valid/invalid standards corpus, libSBML/Antimony comparisons and assumption-receipt differential value. No live actuation.
