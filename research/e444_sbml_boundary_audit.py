@@ -44,11 +44,14 @@ def check_model(xml, case):
     rates = (parameters.get("k1"), parameters.get("k2"))
     reactions = model.findall("s:listOfReactions/s:reaction", NS)
     pairs = []
-    for reaction in reactions:
+    for index, reaction in enumerate(reactions):
         react = reaction.findall("s:listOfReactants/s:speciesReference", NS)
         prod = reaction.findall("s:listOfProducts/s:speciesReference", NS)
         if len(react) != 1 or len(prod) != 1:
             raise ValueError("unexpected reaction arity")
+        expected_species = ("S1", "S2") if index == 0 else ("S2", "S1")
+        if (react[0].get("species"), prod[0].get("species")) != expected_species:
+            raise ValueError("unexpected reaction species")
         pairs.append((float(react[0].get("stoichiometry", "nan")),
                       float(prod[0].get("stoichiometry", "nan"))))
     expected = CASES[case]
@@ -63,8 +66,11 @@ def check_model(xml, case):
         expected_laws += (["compartment", "k2", "S2"],)
     if tuple(laws) != expected_laws:
         raise ValueError("unexpected kinetic identifiers")
-    if case == "00004" and not reactions[1].findall(f".//{mathml}power"):
-        raise ValueError("nonlinear reverse law missing")
+    if case == "00004":
+        powers = reactions[1].findall(f".//{mathml}power")
+        exponents = [n.text.strip() for n in reactions[1].findall(f".//{mathml}cn")]
+        if len(powers) != 1 or exponents != ["2"]:
+            raise ValueError("unexpected nonlinear reverse law")
     return initial, rates, boundary
 
 
