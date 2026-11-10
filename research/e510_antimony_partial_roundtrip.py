@@ -160,6 +160,31 @@ def run_probe(model_path: Path, output_dir: Path) -> dict[str, Any]:
     source_signature = _sbml_signature(source_sbml)
     (output_dir / "source_bioir_model.xml").write_text(source_sbml, encoding="utf-8")
 
+    # Control: a libSBML-only parse/write cycle separates annotation loss in
+    # Antimony from loss in the BioIR exporter or libSBML serializer itself.
+    libsbml_document = libsbml.readSBMLFromString(source_sbml)
+    if libsbml_document is None or libsbml_document.getModel() is None:
+        raise RuntimeError("libSBML control could not parse the source SBML model")
+    libsbml_roundtrip = libsbml.writeSBMLToString(libsbml_document)
+    if not libsbml_roundtrip:
+        raise RuntimeError("libSBML control produced no round-trip SBML")
+    libsbml_signature = _sbml_signature(libsbml_roundtrip)
+    (output_dir / "libsbml_roundtrip.xml").write_text(
+        libsbml_roundtrip, encoding="utf-8"
+    )
+    libsbml_control = {
+        "status": "PASS",
+        "roundtrip_sbml_sha256": _sha256(libsbml_roundtrip),
+        "bioir_model_annotation_preserved": (
+            source_signature["bioir_model_annotation"]
+            and libsbml_signature["bioir_model_annotation"]
+        ),
+        "bioir_interaction_annotation_preserved": (
+            source_signature["reactions"][0]["bioir_annotation"]
+            and libsbml_signature["reactions"][0]["bioir_annotation"]
+        ),
+    }
+
     # Positive control: prove the pinned Antimony binding can parse and export
     # a fully executable reaction before interpreting a partial-model result.
     antimony.clearPreviousLoads()
@@ -183,6 +208,7 @@ def run_probe(model_path: Path, output_dir: Path) -> dict[str, Any]:
             "antimony_model": positive_module,
             "sbml_signature": positive_signature,
         },
+        "libsbml_control": libsbml_control,
         "antimony_version": importlib.metadata.version("antimony"),
         "libsbml_version": libsbml.getLibSBMLDottedVersion(),
         "source_sbml_sha256": _sha256(source_sbml),
