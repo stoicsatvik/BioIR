@@ -68,6 +68,13 @@ def test_bioir_fixture_is_deliberately_partial_and_non_executable(tmp_path):
             "bioir_model_annotation_preserved",
             "bioir_interaction_annotation_preserved",
         }
+        # Preserve the current negative interoperability result for pinned
+        # Antimony 3.3.0: core structure survives, BioIR annotations do not.
+        assert result["comparison"]["core_structure_preserved"] is True
+        assert result["comparison"]["unresolved_parameter_preserved"] is True
+        assert result["comparison"]["kinetic_law_absence_preserved"] is True
+        assert result["comparison"]["bioir_model_annotation_preserved"] is False
+        assert result["comparison"]["bioir_interaction_annotation_preserved"] is False
 
 
 def test_antimony_positive_control_is_executable():
