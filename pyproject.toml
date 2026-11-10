@@ -15,6 +15,7 @@ dependencies = []
 [project.optional-dependencies]
 test = ["pytest>=8,<9"]
 sbml = ["python-libsbml>=5.20,<6"]
+antimony = ["antimony==3.3.0"]
 
 [project.scripts]
 bioir = "bioir.cli:main"
