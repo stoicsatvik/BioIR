@@ -21,6 +21,9 @@ def test_bioir_fixture_is_deliberately_partial_and_non_executable(tmp_path):
     source = result["source_signature"]
 
     assert result["positive_control"]["status"] == "PASS"
+    assert result["libsbml_control"]["status"] == "PASS"
+    assert result["libsbml_control"]["bioir_model_annotation_preserved"] is True
+    assert result["libsbml_control"]["bioir_interaction_annotation_preserved"] is True
     assert result["antimony_version"] == "3.3.0"
     assert result["libsbml_version"]
     assert result["status"] in {
