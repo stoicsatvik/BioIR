@@ -1,0 +1,255 @@
+from __future__ import annotations
+
+import argparse
+import hashlib
+import importlib.metadata
+import json
+from pathlib import Path
+from typing import Any
+
+import antimony
+import libsbml
+
+from bioir.cli import load_semantic_model
+from bioir.sbml_backend import BIOIR_NS, to_sbml_xml
+
+
+POSITIVE_CONTROL = """model positive_control
+  A = 1;
+  B = 0;
+  k1 = 0.1;
+  J0: A -> B; k1*A;
+end
+"""
+
+
+def _sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _sbml_signature(xml: str) -> dict[str, Any]:
+    document = libsbml.readSBMLFromString(xml)
+    if document is None or document.getModel() is None:
+        raise ValueError("libSBML could not parse the SBML model")
+    model = document.getModel()
+    errors = []
+    for index in range(document.getNumErrors()):
+        error = document.getError(index)
+        errors.append(
+            {
+                "severity": int(error.getSeverity()),
+                "category": str(error.getCategoryAsString()),
+                "message": str(error.getMessage()).strip(),
+            }
+        )
+
+    compartments = []
+    for index in range(model.getNumCompartments()):
+        item = model.getCompartment(index)
+        compartments.append(
+            {
+                "id": item.getId(),
+                "size": float(item.getSize()) if item.isSetSize() else None,
+                "units": item.getUnits() if item.isSetUnits() else None,
+            }
+        )
+
+    species = []
+    for index in range(model.getNumSpecies()):
+        item = model.getSpecies(index)
+        species.append(
+            {
+                "id": item.getId(),
+                "compartment": item.getCompartment(),
+                "substance_units": item.getSubstanceUnits() if item.isSetSubstanceUnits() else None,
+                "initial_concentration": (
+                    float(item.getInitialConcentration())
+                    if item.isSetInitialConcentration()
+                    else None
+                ),
+                "initial_amount": (
+                    float(item.getInitialAmount()) if item.isSetInitialAmount() else None
+                ),
+            }
+        )
+
+    parameters = []
+    for index in range(model.getNumParameters()):
+        item = model.getParameter(index)
+        parameters.append(
+            {
+                "id": item.getId(),
+                "units": item.getUnits() if item.isSetUnits() else None,
+                "value_set": bool(item.isSetValue()),
+                "value": float(item.getValue()) if item.isSetValue() else None,
+                "constant": bool(item.getConstant()),
+            }
+        )
+
+    reactions = []
+    for index in range(model.getNumReactions()):
+        item = model.getReaction(index)
+        reactions.append(
+            {
+                "id": item.getId(),
+                "reversible": bool(item.getReversible()),
+                "reactants": sorted(
+                    (item.getReactant(j).getSpecies(), float(item.getReactant(j).getStoichiometry()))
+                    for j in range(item.getNumReactants())
+                ),
+                "products": sorted(
+                    (item.getProduct(j).getSpecies(), float(item.getProduct(j).getStoichiometry()))
+                    for j in range(item.getNumProducts())
+                ),
+                "kinetic_law_present": item.getKineticLaw() is not None,
+                "bioir_annotation": BIOIR_NS in (item.getAnnotationString() or ""),
+            }
+        )
+
+    model_annotation = model.getAnnotationString() or ""
+    return {
+        "document_error_count": int(document.getNumErrors()),
+        "document_diagnostics": errors,
+        "model_id": model.getId(),
+        "compartments": sorted(compartments, key=lambda row: row["id"]),
+        "species": sorted(species, key=lambda row: row["id"]),
+        "parameters": sorted(parameters, key=lambda row: row["id"]),
+        "reactions": sorted(reactions, key=lambda row: row["id"]),
+        "bioir_model_annotation": BIOIR_NS in model_annotation,
+    }
+
+
+def _load_antimony_sbml(xml: str) -> tuple[str | None, str | None]:
+    antimony.clearPreviousLoads()
+    handle = antimony.loadSBMLString(xml)
+    if handle < 0:
+        return None, str(antimony.getLastError())
+    module = antimony.getMainModuleName()
+    text = antimony.getAntimonyString(module)
+    if not text:
+        return None, str(antimony.getLastError())
+    return text, None
+
+
+def run_probe(model_path: Path, output_dir: Path) -> dict[str, Any]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    model = load_semantic_model(model_path)
+    source_sbml = to_sbml_xml(model)
+    source_signature = _sbml_signature(source_sbml)
+    (output_dir / "source_bioir_model.xml").write_text(source_sbml, encoding="utf-8")
+
+    # Positive control: prove the pinned Antimony binding can parse and export
+    # a fully executable reaction before interpreting a partial-model result.
+    antimony.clearPreviousLoads()
+    positive_handle = antimony.loadAntimonyString(POSITIVE_CONTROL)
+    if positive_handle < 0:
+        raise RuntimeError(f"Antimony positive control failed: {antimony.getLastError()}")
+    positive_module = antimony.getMainModuleName()
+    positive_sbml = antimony.getSBMLString(positive_module)
+    if not positive_sbml:
+        raise RuntimeError(f"Antimony positive control produced no SBML: {antimony.getLastError()}")
+    positive_signature = _sbml_signature(positive_sbml)
+
+    antimony_text, import_error = _load_antimony_sbml(source_sbml)
+    result: dict[str, Any] = {
+        "status": "REJECTED_BY_ANTIMONY",
+        "import_error": import_error,
+        "roundtrip_error": None,
+        "source_signature": source_signature,
+        "positive_control": {
+            "status": "PASS",
+            "antimony_model": positive_module,
+            "sbml_signature": positive_signature,
+        },
+        "antimony_version": importlib.metadata.version("antimony"),
+        "libsbml_version": libsbml.getLibSBMLDottedVersion(),
+        "source_sbml_sha256": _sha256(source_sbml),
+        "antimony_text_sha256": None,
+        "roundtrip_sbml_sha256": None,
+        "antimony_text": None,
+        "roundtrip_signature": None,
+        "comparison": {
+            "core_structure_preserved": False,
+            "unresolved_parameter_preserved": False,
+            "kinetic_law_absence_preserved": False,
+            "bioir_model_annotation_preserved": False,
+            "bioir_interaction_annotation_preserved": False,
+        },
+        "claim_boundary": (
+            "Synthetic partial-model interoperability probe only; no biological "
+            "model validation or executable completion is claimed."
+        ),
+    }
+
+    if antimony_text is not None:
+        result["status"] = "IMPORTED_FROM_SBML"
+        result["antimony_text"] = antimony_text
+        result["antimony_text_sha256"] = _sha256(antimony_text)
+        (output_dir / "antimony_partial_model.ant").write_text(antimony_text, encoding="utf-8")
+
+        antimony.clearPreviousLoads()
+        roundtrip_handle = antimony.loadAntimonyString(antimony_text)
+        if roundtrip_handle < 0:
+            result["status"] = "ROUNDTRIP_FAILED"
+            result["roundtrip_error"] = str(antimony.getLastError())
+        else:
+            roundtrip_module = antimony.getMainModuleName()
+            roundtrip_sbml = antimony.getSBMLString(roundtrip_module)
+            if not roundtrip_sbml:
+                result["status"] = "ROUNDTRIP_FAILED"
+                result["roundtrip_error"] = str(antimony.getLastError())
+            else:
+                result["status"] = "ROUNDTRIP_COMPLETED"
+                result["roundtrip_sbml_sha256"] = _sha256(roundtrip_sbml)
+                result["roundtrip_signature"] = _sbml_signature(roundtrip_sbml)
+                (output_dir / "antimony_roundtrip.xml").write_text(
+                    roundtrip_sbml, encoding="utf-8"
+                )
+
+                source = source_signature
+                roundtrip = result["roundtrip_signature"]
+                source_core = {
+                    key: source[key]
+                    for key in ("compartments", "species", "parameters", "reactions")
+                }
+                roundtrip_core = {
+                    key: roundtrip[key]
+                    for key in ("compartments", "species", "parameters", "reactions")
+                }
+                result["comparison"] = {
+                    "core_structure_preserved": source_core == roundtrip_core,
+                    "unresolved_parameter_preserved": (
+                        any(not row["value_set"] for row in source["parameters"])
+                        and any(not row["value_set"] for row in roundtrip["parameters"])
+                    ),
+                    "kinetic_law_absence_preserved": (
+                        any(not row["kinetic_law_present"] for row in source["reactions"])
+                        and any(not row["kinetic_law_present"] for row in roundtrip["reactions"])
+                    ),
+                    "bioir_model_annotation_preserved": (
+                        source["bioir_model_annotation"]
+                        and roundtrip["bioir_model_annotation"]
+                    ),
+                    "bioir_interaction_annotation_preserved": (
+                        any(row["bioir_annotation"] for row in source["reactions"])
+                        and any(row["bioir_annotation"] for row in roundtrip["reactions"])
+                    ),
+                }
+
+    receipt_path = output_dir / "antimony_partial_model_receipt.json"
+    receipt_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return result
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", default="examples/underspecified_conversion.json")
+    parser.add_argument("--out", default="artifacts/e510-antimony-partial-model")
+    args = parser.parse_args()
+    result = run_probe(Path(args.model), Path(args.out))
+    print(json.dumps({key: value for key, value in result.items() if key != "antimony_text"}, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
