@@ -6,12 +6,13 @@ import importlib.metadata
 import json
 from pathlib import Path
 from typing import Any
+import xml.etree.ElementTree as ET
 
 import antimony
 import libsbml
 
 from bioir.cli import load_semantic_model
-from bioir.sbml_backend import BIOIR_NS, to_sbml_xml
+from bioir.sbml_backend import BIOIR_NS, SBML_NS, to_sbml_xml
 
 
 POSITIVE_CONTROL = """model positive_control
@@ -32,6 +33,28 @@ def _sbml_signature(xml: str) -> dict[str, Any]:
     if document is None or document.getModel() is None:
         raise ValueError("libSBML could not parse the SBML model")
     model = document.getModel()
+    xml_root = ET.fromstring(xml)
+    sbml_model = xml_root.find(f".//{{{SBML_NS}}}model")
+    if sbml_model is None:
+        raise ValueError("SBML XML has no model element")
+    model_annotation_element = sbml_model.find(f"{{{SBML_NS}}}annotation")
+    bioir_model_annotation = bool(
+        model_annotation_element is not None
+        and any(
+            child.tag == f"{{{BIOIR_NS}}}semanticModel"
+            for child in model_annotation_element
+        )
+    )
+    reaction_annotations = {}
+    for reaction_element in sbml_model.findall(f".//{{{SBML_NS}}}reaction"):
+        annotation_element = reaction_element.find(f"{{{SBML_NS}}}annotation")
+        reaction_annotations[reaction_element.get("id", "")] = bool(
+            annotation_element is not None
+            and any(
+                child.tag == f"{{{BIOIR_NS}}}interaction"
+                for child in annotation_element
+            )
+        )
     errors = []
     for index in range(document.getNumErrors()):
         error = document.getError(index)
@@ -102,11 +125,10 @@ def _sbml_signature(xml: str) -> dict[str, Any]:
                     for j in range(item.getNumProducts())
                 ),
                 "kinetic_law_present": item.getKineticLaw() is not None,
-                "bioir_annotation": BIOIR_NS in (item.getAnnotationString() or ""),
+                "bioir_annotation": reaction_annotations.get(item.getId(), False),
             }
         )
 
-    model_annotation = model.getAnnotationString() or ""
     return {
         "document_error_count": int(document.getNumErrors()),
         "document_diagnostics": errors,
@@ -115,7 +137,7 @@ def _sbml_signature(xml: str) -> dict[str, Any]:
         "species": sorted(species, key=lambda row: row["id"]),
         "parameters": sorted(parameters, key=lambda row: row["id"]),
         "reactions": sorted(reactions, key=lambda row: row["id"]),
-        "bioir_model_annotation": BIOIR_NS in model_annotation,
+        "bioir_model_annotation": bioir_model_annotation,
     }
 
 
