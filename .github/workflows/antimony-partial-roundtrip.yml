@@ -42,7 +42,7 @@ jobs:
         run: |
           python research/e510_antimony_partial_roundtrip.py --out "$RUNNER_TEMP/e510-antimony"
       - name: Run deterministic Antimony probe tests
-        run: pytest -q tests/test_e510_antimony_partial_roundtrip.py
+        run: python -m pytest -q tests/test_e510_antimony_partial_roundtrip.py
       - name: Preserve interoperability receipt and round-trip artifacts
         if: always()
         uses: actions/upload-artifact@v4
