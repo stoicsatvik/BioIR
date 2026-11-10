@@ -8,7 +8,9 @@ import pytest
 pytest.importorskip("antimony")
 pytest.importorskip("libsbml")
 
-from research.e510_antimony_partial_roundtrip import run_probe
+from bioir.cli import load_semantic_model
+from bioir.sbml_backend import to_sbml_xml
+from research.e510_antimony_partial_roundtrip import _sbml_signature, run_probe
 
 
 def test_bioir_fixture_is_deliberately_partial_and_non_executable(tmp_path):
@@ -86,3 +88,14 @@ def test_antimony_positive_control_is_executable():
     assert model is not None
     assert model.getNumReactions() == 1
     assert model.getReaction(0).getKineticLaw() is not None
+ 
+def test_bioir_annotation_detection_is_prefix_independent():
+    model = load_semantic_model(Path("examples/underspecified_conversion.json"))
+    xml = to_sbml_xml(model)
+    aliased_xml = xml.replace("xmlns:bioir=", "xmlns:semantic=").replace(
+        "bioir:", "semantic:"
+    )
+
+    signature = _sbml_signature(aliased_xml)
+    assert signature["bioir_model_annotation"] is True
+    assert signature["reactions"][0]["bioir_annotation"] is True
