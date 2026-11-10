@@ -208,31 +208,69 @@ def run_probe(model_path: Path, output_dir: Path) -> dict[str, Any]:
 
                 source = source_signature
                 roundtrip = result["roundtrip_signature"]
-                source_core = {
-                    key: source[key]
-                    for key in ("compartments", "species", "parameters", "reactions")
-                }
-                roundtrip_core = {
-                    key: roundtrip[key]
-                    for key in ("compartments", "species", "parameters", "reactions")
-                }
+                def canonical_core(signature: dict[str, Any]) -> dict[str, Any]:
+                    def rounded(value: Any) -> Any:
+                        return round(value, 12) if isinstance(value, float) else value
+
+                    compartments = [
+                        {key: rounded(value) for key, value in row.items()}
+                        for row in signature["compartments"]
+                    ]
+                    species = [
+                        {key: rounded(value) for key, value in row.items()}
+                        for row in signature["species"]
+                    ]
+                    parameters = [
+                        {key: rounded(value) for key, value in row.items()}
+                        for row in signature["parameters"]
+                    ]
+                    reactions = []
+                    for row in signature["reactions"]:
+                        reactions.append({
+                            key: (
+                                [(item[0], rounded(item[1])) for item in value]
+                                if key in {"reactants", "products"}
+                                else value
+                            )
+                            for key, value in row.items()
+                            if key != "bioir_annotation"
+                        })
+                    return {
+                        "compartments": compartments,
+                        "species": species,
+                        "parameters": parameters,
+                        "reactions": reactions,
+                    }
+
+                source_parameters = {row["id"]: row for row in source["parameters"]}
+                roundtrip_parameters = {row["id"]: row for row in roundtrip["parameters"]}
+                source_reactions = {row["id"]: row for row in source["reactions"]}
+                roundtrip_reactions = {row["id"]: row for row in roundtrip["reactions"]}
                 result["comparison"] = {
-                    "core_structure_preserved": source_core == roundtrip_core,
+                    "core_structure_preserved": (
+                        canonical_core(source) == canonical_core(roundtrip)
+                    ),
                     "unresolved_parameter_preserved": (
-                        any(not row["value_set"] for row in source["parameters"])
-                        and any(not row["value_set"] for row in roundtrip["parameters"])
+                        "k1" in source_parameters
+                        and "k1" in roundtrip_parameters
+                        and not source_parameters["k1"]["value_set"]
+                        and not roundtrip_parameters["k1"]["value_set"]
                     ),
                     "kinetic_law_absence_preserved": (
-                        any(not row["kinetic_law_present"] for row in source["reactions"])
-                        and any(not row["kinetic_law_present"] for row in roundtrip["reactions"])
+                        "A_to_B" in source_reactions
+                        and "A_to_B" in roundtrip_reactions
+                        and not source_reactions["A_to_B"]["kinetic_law_present"]
+                        and not roundtrip_reactions["A_to_B"]["kinetic_law_present"]
                     ),
                     "bioir_model_annotation_preserved": (
                         source["bioir_model_annotation"]
                         and roundtrip["bioir_model_annotation"]
                     ),
                     "bioir_interaction_annotation_preserved": (
-                        any(row["bioir_annotation"] for row in source["reactions"])
-                        and any(row["bioir_annotation"] for row in roundtrip["reactions"])
+                        "A_to_B" in source_reactions
+                        and "A_to_B" in roundtrip_reactions
+                        and source_reactions["A_to_B"]["bioir_annotation"]
+                        and roundtrip_reactions["A_to_B"]["bioir_annotation"]
                     ),
                 }
 
